@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="color-scheme" content="light dark">
+<title>股票判断机</title>
+<style>
+/* ============ 设计令牌（iOS 系统色） ============ */
+:root{
+  --bg:#f2f2f7; --bg-elev:#ffffff; --bg-group:#ffffff;
+  --fill-1:rgba(120,120,128,.12); --fill-2:rgba(120,120,128,.16); --fill-3:rgba(120,120,128,.08);
+  --text:#000; --text-2:rgba(60,60,67,.6); --text-3:rgba(60,60,67,.3);
+  --sep:rgba(60,60,67,.29); --sep-op:rgba(60,60,67,.12);
+  --blue:#007aff; --green:#34c759; --red:#ff3b30; --orange:#ff9500; --darkred:#8e0000;
+  --gray:#8e8e93;
+  --nav-bg:rgba(249,249,249,.82);
+  --radius:12px; --radius-lg:14px;
+  --shadow:0 1px 3px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#000; --bg-elev:#1c1c1e; --bg-group:#1c1c1e;
+    --fill-1:rgba(120,120,128,.24); --fill-2:rgba(120,120,128,.32); --fill-3:rgba(120,120,128,.18);
+    --text:#fff; --text-2:rgba(235,235,245,.6); --text-3:rgba(235,235,245,.3);
+    --sep:rgba(84,84,88,.65); --sep-op:rgba(84,84,88,.4);
+    --blue:#0a84ff; --green:#30d158; --red:#ff453a; --orange:#ff9f0a; --darkred:#ff6961;
+    --gray:#98989d;
+    --nav-bg:rgba(30,30,32,.8);
+    --shadow:none;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overscroll-behavior-y:none}
+body{
+  background:var(--bg);color:var(--text);
+  font:17px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,textarea{font:inherit;color:inherit;font-family:inherit}
+a{color:inherit;text-decoration:none}
+
+/* ============ 顶栏 ============ */
+.nav{
+  position:sticky;top:0;z-index:30;
+  background:var(--nav-bg);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:.5px solid var(--sep-op);
+  padding-top:env(safe-area-inset-top);
+}
+.nav-row{display:flex;align-items:center;gap:8px;padding:8px 16px 0;min-height:44px}
+.nav-title{flex:1;font-size:17px;font-weight:600;letter-spacing:-.2px}
+.nav-btn{
+  border:0;background:var(--fill-1);color:var(--blue);border-radius:50%;
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  font-size:15px;padding:0;transition:transform .12s,background .12s;
+}
+.nav-btn:active{transform:scale(.9);background:var(--fill-2)}
+.nav-btn.on{background:var(--blue);color:#fff}
+.search{padding:8px 16px 10px}
+.search input{
+  width:100%;height:36px;border:0;border-radius:10px;padding:0 12px;
+  background:var(--fill-1);outline:none;font-size:16px;
+}
+.search input::placeholder{color:var(--text-3)}
+
+/* ============ 分段控件 ============ */
+.segs-wrap{padding:0 16px 8px}
+.segs{
+  display:flex;gap:2px;background:var(--fill-1);border-radius:9px;padding:2px;
+  overflow-x:auto;scrollbar-width:none;
+}
+.segs::-webkit-scrollbar{display:none}
+.seg{
+  flex:1 0 auto;border:0;background:transparent;color:var(--text);
+  font-size:13px;font-weight:500;padding:6px 12px;border-radius:7px;
+  white-space:nowrap;transition:background .15s;
+}
+.seg.on{background:var(--bg-elev);box-shadow:0 3px 8px rgba(0,0,0,.12);font-weight:600}
+
+/* ============ 列表 ============ */
+.wrap{padding:0 16px calc(100px + env(safe-area-inset-bottom))}
+.group{background:var(--bg-group);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:16px}
+.group-hd{
+  font-size:13px;color:var(--text-2);padding:0 16px 6px;text-transform:none;
+  display:flex;justify-content:space-between;align-items:baseline;
+}
+.row{
+  display:flex;align-items:center;gap:12px;padding:11px 16px;
+  border-bottom:.5px solid var(--sep-op);transition:background .12s;
+  position:relative;
+}
+.row:last-child{border-bottom:0}
+.row:active{background:var(--fill-3)}
+.row .main{flex:1;min-width:0}
+.row .t1{font-size:16px;font-weight:500;letter-spacing:-.2px;display:flex;align-items:center;gap:5px}
+.row .t2{font-size:13px;color:var(--text-2);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.row .t3{font-size:12.5px;color:var(--text-2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.star{color:var(--orange);font-size:13px}
+.tag{
+  font-size:11.5px;padding:1.5px 7px;border-radius:6px;
+  background:var(--fill-1);color:var(--text-2);font-weight:500;
+}
+.tag.cat{background:rgba(0,122,255,.12);color:var(--blue)}
+.pill{
+  font-size:12px;font-weight:600;padding:3px 10px;border-radius:100px;color:#fff;
+  letter-spacing:.2px;flex:0 0 auto;
+}
+.chev{color:var(--text-3);font-size:15px;flex:0 0 auto}
+
+/* ============ 详情 ============ */
+.detail{
+  position:fixed;inset:0;z-index:60;background:var(--bg);overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  transform:translateX(100%);transition:transform .28s cubic-bezier(.32,.72,0,1);
+  padding-bottom:calc(96px + env(safe-area-inset-bottom));
+}
+.detail.show{transform:translateX(0)}
+.dnav{
+  position:sticky;top:0;z-index:5;background:var(--nav-bg);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:.5px solid var(--sep-op);
+  padding-top:env(safe-area-inset-top);
+  display:flex;align-items:center;gap:6px;padding:8px 12px;min-height:48px;
+}
+.dnav .back{border:0;background:none;color:var(--blue);font-size:17px;padding:4px 2px;display:flex;align-items:center;gap:2px}
+.dnav .back:active{opacity:.5}
+.dnav .dt{flex:1;min-width:0;font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+.dbody{padding:16px}
+.hero{padding:4px 16px 16px}
+.hero h1{margin:0;font-size:28px;font-weight:700;letter-spacing:-.6px;line-height:1.15}
+.hero .meta{margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+.card{background:var(--bg-group);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:16px}
+.card-hd{
+  font-size:13px;font-weight:600;color:var(--text-2);
+  padding:10px 16px 8px;border-bottom:.5px solid var(--sep-op);
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+}
+.card-hd .sub{font-weight:400;color:var(--text-3);font-size:12px}
+.card-pad{padding:14px 16px;font-size:15.5px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word}
+
+/* 判断机结果表 */
+.tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;min-width:430px;font-size:13.5px}
+th,td{border-bottom:.5px solid var(--sep-op);padding:9px 12px;text-align:left;vertical-align:top}
+th{background:var(--fill-3);font-weight:600;color:var(--text-2);white-space:nowrap;font-size:12.5px}
+tr:last-child td{border-bottom:0}
+td.hit{font-weight:600;white-space:nowrap}
+.grp td{
+  font-size:12px;font-weight:600;color:var(--text-2);background:var(--fill-3);
+  padding:6px 12px;
+}
+
+/* 公告列表 */
+.ann{display:block;padding:11px 16px;border-bottom:.5px solid var(--sep-op);transition:background .12s}
+.ann:last-child{border-bottom:0}
+.ann:active{background:var(--fill-3)}
+.ann .at{font-size:14.5px;line-height:1.45;color:var(--text);display:flex;gap:8px;align-items:flex-start}
+.ann .at .ext{color:var(--text-3);font-size:12px;flex:0 0 auto;margin-top:2px}
+.ann .am{font-size:12px;color:var(--text-2);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap}
+.more{
+  width:100%;border:0;background:transparent;color:var(--blue);
+  font-size:14.5px;font-weight:500;padding:12px;border-top:.5px solid var(--sep-op);
+}
+.more:active{background:var(--fill-3)}
+.empty-row{padding:20px 16px;text-align:center;color:var(--text-3);font-size:14px}
+.empty{text-align:center;color:var(--text-2);padding:60px 32px;font-size:15px;line-height:1.7}
+
+/* 底部操作条 */
+.acts{
+  position:fixed;left:0;right:0;bottom:0;z-index:70;
+  background:var(--nav-bg);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
+  border-top:.5px solid var(--sep-op);
+  display:flex;gap:8px;padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+  transform:translateY(110%);transition:transform .28s cubic-bezier(.32,.72,0,1);
+}
+.acts.show{transform:translateY(0)}
+.acts button{
+  flex:1;border:0;background:var(--fill-1);border-radius:11px;padding:11px 0;
+  font-size:15px;font-weight:500;transition:transform .12s,background .12s;
+}
+.acts button:active{transform:scale(.96)}
+.acts button.primary{background:var(--blue);color:#fff}
+.acts button.fav-on{background:rgba(255,149,0,.16);color:var(--orange)}
+
+/* ============ 弹层（sheet） ============ */
+.mask{
+  position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.4);
+  display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .25s;
+}
+.mask.show{opacity:1;pointer-events:auto}
+.sheet{
+  width:100%;background:var(--bg-elev);border-radius:14px 14px 0 0;
+  padding:0 0 calc(12px + env(safe-area-inset-bottom));
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);
+  max-height:88vh;overflow-y:auto;
+}
+.mask.show .sheet{transform:translateY(0)}
+.sheet-grab{width:36px;height:5px;border-radius:3px;background:var(--fill-2);margin:8px auto 4px}
+.sheet h3{margin:6px 20px 12px;font-size:17px;font-weight:600}
+.sheet .grp{margin:0 16px 14px;background:var(--bg);border-radius:var(--radius);overflow:hidden}
+.sheet label{display:block;font-size:13px;color:var(--text-2);padding:12px 14px 4px}
+.sheet input[type=text],.sheet textarea{
+  width:100%;border:0;background:transparent;padding:8px 14px 12px;outline:none;
+  font-size:14px;line-height:1.5;
+}
+.sheet textarea{height:96px;resize:none;font-family:ui-monospace,Menlo,Consolas,monospace}
+.sheet .hint{font-size:12px;color:var(--text-3);padding:0 14px 12px;line-height:1.5}
+.sheet-item{
+  display:flex;align-items:center;gap:12px;padding:14px 16px;font-size:16px;
+  border-bottom:.5px solid var(--sep-op);width:100%;border-left:0;border-right:0;border-top:0;
+  background:transparent;text-align:left;
+}
+.sheet-item:last-child{border-bottom:0}
+.sheet-item:active{background:var(--fill-3)}
+.sheet-item .ic{width:22px;text-align:center;color:var(--blue)}
+.sheet-item .tx{flex:1}
+.sheet-item .danger{color:var(--red)}
+.sheet-btns{display:flex;gap:10px;padding:0 16px 8px}
+.sheet-btns button{
+  flex:1;border:0;border-radius:11px;padding:12px 0;font-size:16px;font-weight:500;
+  background:var(--fill-1);
+}
+.sheet-btns button.primary{background:var(--blue);color:#fff}
+.sheet-btns button:active{transform:scale(.97)}
+
+/* toast */
+.toast{
+  position:fixed;left:50%;bottom:120px;transform:translateX(-50%) translateY(8px);z-index:200;
+  background:rgba(0,0,0,.82);color:#fff;padding:9px 18px;border-radius:100px;font-size:14px;
+  opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;max-width:80vw;text-align:center;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.spin{
+  width:22px;height:22px;border:2.5px solid var(--fill-2);border-top-color:var(--blue);
+  border-radius:50%;animation:sp .8s linear infinite;margin:0 auto 14px;
+}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- 顶栏 -->
+<div class="nav">
+  <div class="nav-row">
+    <div class="nav-title" id="navTitle">股票判断机</div>
+    <button class="nav-btn" id="btnFav" title="只看收藏">★</button>
+    <button class="nav-btn" id="btnMore" title="更多">⋯</button>
+  </div>
+  <div class="search"><input id="q" type="search" placeholder="搜索名称 / 代码" autocomplete="off"></div>
+  <div class="segs-wrap"><div class="segs" id="catSegs"></div></div>
+  <div class="segs-wrap"><div class="segs" id="stSegs"></div></div>
+</div>
+
+<!-- 列表 -->
+<div class="wrap" id="listWrap">
+  <div class="empty"><div class="spin"></div>正在加载…</div>
+</div>
+
+<!-- 详情 -->
+<div class="detail" id="detail">
+  <div class="dnav">
+    <button class="back" id="btnBack">‹ 返回</button>
+    <div class="dt" id="dTitle"></div>
+    <div style="width:52px"></div>
+  </div>
+  <div id="dHero"></div>
+  <div class="dbody" id="dBody"></div>
+</div>
+
+<!-- 底部操作 -->
+<div class="acts" id="acts">
+  <button id="aFav">收藏</button>
+  <button id="aCmt">点评</button>
+  <button id="aCopy" class="primary">复制代码</button>
+</div>
+
+<!-- 弹层 -->
+<div class="mask" id="mask"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==================================================================
+   构建时注入（可被 App 内设置覆盖）
+   ================================================================== */
+const DEF_KEY  = '__AES_KEY__';
+const DEF_URLS = '__DATA_URL__';
+
+const LS = {
+  fav: 'sj.fav.v3', cmt: 'sj.cmt.v3', cache: 'sj.cache.v3',
+  urls: 'sj.urls.v3', key: 'sj.key.v3',
+};
+
+/* ==================================================================
+   状态
+   ================================================================== */
+const state = { data: null, query: '', cat: '', concl: '', onlyFav: false, cur: null, annShown: 30 };
+let favs = new Set(), cmts = {};
+
+const $ = (id) => document.getElementById(id);
+
+function toast(msg, ms) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), ms || 1800);
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+function hexToBytes(hex) {
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
+  return out;
+}
+
+function b64ToBytes(b64) {
+  const s = String(b64).replace(/[^A-Za-z0-9+/=]/g, '');
+  const bin = atob(s);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+const keyOf = (r) => r.code + '|' + r.category;
+
+/* ==================================================================
+   设置读写
+   ================================================================== */
+function getUrls() {
+  const custom = (localStorage.getItem(LS.urls) || '').split(/\s*\n\s*/).map((s) => s.trim()).filter(Boolean);
+  if (custom.length) return custom;
+  return String(DEF_URLS).split(/\s*\n\s*/).map((s) => s.trim()).filter((s) => s && s.indexOf('__') !== 0);
+}
+function getKeyHex() {
+  const custom = (localStorage.getItem(LS.key) || '').trim();
+  return /^[0-9a-fA-F]{64}$/.test(custom) ? custom : DEF_KEY;
+}
+
+function loadLocal() {
+  try { favs = new Set(JSON.parse(localStorage.getItem(LS.fav) || '[]')); } catch (e) { favs = new Set(); }
+  try { cmts = JSON.parse(localStorage.getItem(LS.cmt) || '{}'); } catch (e) { cmts = {}; }
+}
+const saveFav = () => localStorage.setItem(LS.fav, JSON.stringify([...favs]));
+const saveCmt = () => localStorage.setItem(LS.cmt, JSON.stringify(cmts));
+
+/* ==================================================================
+   解密：txt(base64) -> bytes -> AES-256-GCM -> JSON
+   ================================================================== */
+async function decryptBytes(u8) {
+  if (u8.length < 33) throw new Error('文件过短');
+  const magic = String.fromCharCode(u8[0], u8[1], u8[2], u8[3]);
+  if (magic !== 'SJ01') throw new Error('格式不匹配（magic=' + magic + '）');
+  if (!crypto || !crypto.subtle) throw new Error('环境不支持 Web Crypto');
+  const iv = u8.slice(5, 17);
+  const data = u8.slice(17);
+  const keyHex = getKeyHex();
+  const key = await crypto.subtle.importKey('raw', hexToBytes(keyHex), { name: 'AES-GCM' }, false, ['decrypt']);
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+
+async function decryptText(txt) {
+  return decryptBytes(b64ToBytes(txt));
+}
+
+async function loadFromUrl(url) {
+  const res = await fetch(url, { cache: 'no-cache' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return decryptText(await res.text());
+}
+
+async function loadFromUrls(urls) {
+  const errs = [];
+  for (const u of urls) {
+    try { return await loadFromUrl(u); }
+    catch (e) { errs.push(u.replace(/^https?:\/\//, '').slice(0, 42) + ' → ' + e.message); }
+  }
+  throw new Error(errs.join('；'));
+}
+
+/* ==================================================================
+   启动
+   ================================================================== */
+async function boot(silent) {
+  loadLocal();
+  const cached = (() => { try { return JSON.parse(localStorage.getItem(LS.cache) || 'null'); } catch (e) { return null; } })();
+  if (cached) apply(cached, true);
+
+  const urls = getUrls();
+  if (!urls.length) {
+    if (!cached) {
+      $('listWrap').innerHTML = '<div class="empty">未配置数据地址<br><br>点右上角 ⋯ → 数据源设置，或从本地文件导入 txt</div>';
+    }
+    return;
+  }
+
+  if (!silent && !cached) $('listWrap').innerHTML = '<div class="empty"><div class="spin"></div>正在加载…</div>';
+  try {
+    const d = await loadFromUrls(urls);
+    localStorage.setItem(LS.cache, JSON.stringify(d));
+    apply(d, false);
+    if (silent) toast('已更新到最新数据');
+  } catch (e) {
+    if (!cached) $('listWrap').innerHTML = '<div class="empty">加载失败<br><br>' + esc(e.message) + '<br><br>点右上角 ⋯ 检查数据源或从本地导入</div>';
+    else toast('更新失败，显示缓存数据');
+  }
+}
+
+function apply(d, isCache) {
+  state.data = d;
+  const cnt = (d.records || []).length;
+  $('navTitle').textContent = '股票判断机';
+  buildSegs();
+  renderList();
+  if (isCache) $('navTitle').textContent = '股票判断机 · 缓存';
+  else $('navTitle').textContent = '股票判断机 · ' + cnt + ' 条';
+}
+
+/* ==================================================================
+   分段控件
+   ================================================================== */
+function buildSegs() {
+  const cats = Object.keys(state.data.judge_tables || {});
+  $('catSegs').innerHTML =
+    '<button class="seg on" data-cat="">全部</button>' +
+    cats.map((c) => '<button class="seg" data-cat="' + esc(c) + '">' + esc(c) + '</button>').join('');
+  const sts = ['有利', '不利', '待定', '否决'];
+  $('stSegs').innerHTML =
+    '<button class="seg on" data-st="">全部结论</button>' +
+    sts.map((s) => '<button class="seg" data-st="' + esc(s) + '">' + esc(s) + '</button>').join('');
+}
+
+/* ==================================================================
+   列表
+   ================================================================== */
+function renderList() {
+  if (!state.data) return;
+  const q = state.query.trim().toLowerCase();
+  const all = state.data.records || [];
+  const rows = all.filter((r) => {
+    if (state.cat && r.category !== state.cat) return false;
+    if (state.concl && r.conclusion !== state.concl) return false;
+    if (state.onlyFav && !favs.has(keyOf(r))) return false;
+    if (q && r.name.toLowerCase().indexOf(q) < 0 && r.code.indexOf(q) < 0) return false;
+    return true;
+  });
+
+  if (!rows.length) {
+    $('listWrap').innerHTML = '<div class="empty">没有匹配的记录</div>';
+    return;
+  }
+
+  const colors = (state.data.display && state.data.display.status_color) || {};
+  const CAP = 500;
+  const shown = rows.slice(0, CAP);
+
+  const items = shown.map((r) => {
+    const k = keyOf(r);
+    const c = cmts[k];
+    return '<div class="row" data-code="' + esc(r.code) + '" data-cat="' + esc(r.category) + '">' +
+      '<div class="main">' +
+        '<div class="t1">' + esc(r.name) + (favs.has(k) ? '<span class="star">★</span>' : '') + '</div>' +
+        '<div class="t2"><span class="tag">' + esc(r.code) + '</span><span class="tag cat">' + esc(r.category) + '</span></div>' +
+        (c ? '<div class="t3">✎ ' + esc(c) + '</div>' : '') +
+      '</div>' +
+      '<span class="pill" style="background:' + (colors[r.conclusion] || 'var(--gray)') + '">' + esc(r.conclusion) + '</span>' +
+      '<span class="chev">›</span>' +
+    '</div>';
+  }).join('');
+
+  $('listWrap').innerHTML =
+    '<div class="group-hd"><span>共 ' + rows.length + ' 条' + (rows.length > CAP ? '（显示前 ' + CAP + '）' : '') + '</span></div>' +
+    '<div class="group">' + items + '</div>' +
+    (rows.length > CAP ? '<div class="empty" style="padding:16px">请用搜索或筛选缩小范围</div>' : '');
+}
+
+/* ==================================================================
+   详情
+   ================================================================== */
+function findRecord(code, cat) {
+  return (state.data.records || []).find((r) => r.code === code && r.category === cat);
+}
+
+function openDetail(r) {
+  state.cur = r;
+  state.annShown = 30;
+  const d = state.data;
+  const colors = (d.display && d.display.status_color) || {};
+  const stColor = colors[r.conclusion] || 'var(--gray)';
+
+  $('dTitle').textContent = r.name;
+
+  $('dHero').innerHTML =
+    '<div class="hero">' +
+      '<h1>' + esc(r.name) + '</h1>' +
+      '<div class="meta">' +
+        '<span class="tag">' + esc(r.code) + '</span>' +
+        '<span class="tag cat">' + esc(r.category) + '</span>' +
+        '<span class="pill" style="background:' + stColor + '">' + esc(r.conclusion) + '</span>' +
+      '</div>' +
+    '</div>';
+
+  // ---- 判断机结果 ----
+  const t = d.judge_tables[r.category];
+  let judgeHtml = '';
+  if (t) {
+    const cols = t.columns || ['判断问题', '性质', '作用'];
+    const hitColor = (d.display && d.display.hit_color) || {};
+    const groups = ['有利', '不利', '中性', '待定'];
+    let tbody = '';
+    groups.forEach((g) => {
+      const idx = [];
+      t.rows.forEach((row, i) => { if (row[1] === g) idx.push(i); });
+      if (!idx.length) return;
+      tbody += '<tr class="grp"><td colspan="' + (cols.length + 1) + '">' + g + '条件 · ' + idx.length + ' 条</td></tr>';
+      idx.forEach((i) => {
+        const hit = (r.judge && r.judge[i]) || '不确定';
+        tbody += '<tr><td>' + esc(t.rows[i][0]) + '</td><td>' + esc(t.rows[i][2]) + '</td>' +
+          '<td class="hit" style="color:' + (hitColor[hit] || 'var(--text-2)') + '">' + esc(hit) + '</td></tr>';
+      });
+    });
+    judgeHtml =
+      '<div class="card"><div class="card-hd"><span>判断机结果</span><span class="sub">' +
+        esc(t.class || '') + ' ' + esc(t.title || '') + '</span></div>' +
+        '<div class="tblwrap"><table><thead><tr>' +
+          cols.map((c) => '<th>' + esc(c) + '</th>').join('') + '<th>结果</th>' +
+        '</tr></thead><tbody>' + tbody + '</tbody></table></div></div>';
+  }
+
+  // ---- 公告列表 ----
+  const anns = (d.announcements && d.announcements[r.code]) || [];
+  let annHtml = '';
+  if (anns.length) {
+    const show = anns.slice(0, state.annShown);
+    annHtml =
+      '<div class="card"><div class="card-hd"><span>公告列表</span><span class="sub">共 ' + anns.length + ' 条</span></div>' +
+      show.map((a) =>
+        '<a class="ann" href="' + esc(a.url || '#') + '" target="_blank" rel="noopener">' +
+          '<div class="at"><span>' + esc(a.title) + '</span><span class="ext">↗</span></div>' +
+          '<div class="am">' + (a.date ? '<span>' + esc(a.date) + '</span>' : '') +
+            (a.column ? '<span>' + esc(a.column) + '</span>' : '') + '</div>' +
+        '</a>').join('') +
+      (anns.length > state.annShown ? '<button class="more" id="annMore">展开全部（共 ' + anns.length + ' 条）</button>' : '') +
+      '</div>';
+  } else {
+    annHtml = '<div class="card"><div class="card-hd"><span>公告列表</span></div><div class="empty-row">暂无公告</div></div>';
+  }
+
+  // ---- 总结 / 点评 ----
+  const c = cmts[keyOf(r)];
+  $('dBody').innerHTML =
+    judgeHtml +
+    annHtml +
+    '<div class="card"><div class="card-hd"><span>AI 总结</span></div><div class="card-pad">' + esc(r.summary || '—') + '</div></div>' +
+    '<div class="card"><div class="card-hd"><span>我的点评</span></div><div class="card-pad">' +
+      (c ? esc(c) : '<span style="color:var(--text-3)">还没写点评</span>') + '</div></div>';
+
+  const more = $('annMore');
+  if (more) more.onclick = () => { state.annShown = anns.length; openDetail(r); };
+
+  $('detail').classList.add('show');
+  $('acts').classList.add('show');
+  syncActs();
+  $('detail').scrollTop = 0;
+}
+
+function closeDetail() {
+  $('detail').classList.remove('show');
+  $('acts').classList.remove('show');
+  state.cur = null;
+}
+
+function syncActs() {
+  if (!state.cur) return;
+  const on = favs.has(keyOf(state.cur));
+  const b = $('aFav');
+  b.textContent = on ? '已收藏' : '收藏';
+  b.classList.toggle('fav-on', on);
+}
+
+/* ==================================================================
+   弹层
+   ================================================================== */
+function openSheet(html) {
+  $('sheet').innerHTML = '<div class="sheet-grab"></div>' + html;
+  $('mask').classList.add('show');
+}
+function closeSheet() { $('mask').classList.remove('show'); }
+
+function menuSheet() {
+  openSheet(
+    '<h3>更多</h3><div class="grp">' +
+      '<button class="sheet-item" id="mImport"><span class="ic">↧</span><span class="tx">从本地文件导入 txt</span><span class="chev">›</span></button>' +
+      '<button class="sheet-item" id="mSource"><span class="ic">⚙</span><span class="tx">数据源设置</span><span class="chev">›</span></button>' +
+      '<button class="sheet-item" id="mExport"><span class="ic">↥</span><span class="tx">导出收藏与点评</span><span class="chev">›</span></button>' +
+      '<button class="sheet-item" id="mRefresh"><span class="ic">↻</span><span class="tx">重新加载数据</span><span class="chev">›</span></button>' +
+    '</div>' +
+    '<div class="sheet-btns"><button id="mCancel">取消</button></div>'
+  );
+  $('mCancel').onclick = closeSheet;
+  $('mImport').onclick = () => { closeSheet(); pickFile(); };
+  $('mSource').onclick = sourceSheet;
+  $('mExport').onclick = () => { closeSheet(); exportData(); };
+  $('mRefresh').onclick = () => { closeSheet(); boot(true); };
+}
+
+function sourceSheet() {
+  const urls = (localStorage.getItem(LS.urls) || '');
+  const key = (localStorage.getItem(LS.key) || '');
+  openSheet(
+    '<h3>数据源设置</h3>' +
+    '<div class="grp">' +
+      '<label>数据地址（每行一个，按顺序尝试）</label>' +
+      '<textarea id="inUrls" placeholder="https://…/stocks.txt">' + esc(urls) + '</textarea>' +
+      '<div class="hint">留空则使用内置地址。可填多个，第一个不通自动试下一个。</div>' +
+    '</div>' +
+    '<div class="grp">' +
+      '<label>解密密钥（64 位 hex，留空用内置）</label>' +
+      '<input type="text" id="inKey" placeholder="留空使用内置密钥" value="' + esc(key) + '">' +
+      '<div class="hint">只有换密钥时才需要填。</div>' +
+    '</div>' +
+    '<div class="sheet-btns">' +
+      '<button id="sCancel">取消</button>' +
+      '<button id="sSave" class="primary">保存并重新加载</button>' +
+    '</div>'
+  );
+  $('sCancel').onclick = closeSheet;
+  $('sSave').onclick = () => {
+    const u = $('inUrls').value.trim();
+    const k = $('inKey').value.trim();
+    if (k && !/^[0-9a-fA-F]{64}$/.test(k)) { toast('密钥需为 64 位十六进制'); return; }
+    u ? localStorage.setItem(LS.urls, u) : localStorage.removeItem(LS.urls);
+    k ? localStorage.setItem(LS.key, k) : localStorage.removeItem(LS.key);
+    closeSheet();
+    localStorage.removeItem(LS.cache);
+    toast('已保存，正在重新加载');
+    /* ==================================================================
+   外部打开：轮询 MainActivity 注入的文件路径（files/incoming.txt）
+   仅 Android 原生场景会命中；浏览器里该变量永远是 undefined，无副作用。
+   ================================================================== */
+(function () {
+  let tries = 0;
+  const timer = setInterval(async () => {
+    const p = window.__SJ_INCOMING_PATH__;
+    if (p) {
+      window.__SJ_INCOMING_PATH__ = null;
+      clearInterval(timer);
+      try {
+        let url = p;
+        if (window.Capacitor && typeof window.Capacitor.convertFileSrc === 'function') {
+          url = window.Capacitor.convertFileSrc(p);
+        }
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const d = await decryptText(await res.text());
+        localStorage.setItem(LS.cache, JSON.stringify(d));
+        apply(d, false);
+        toast('已打开外部文件');
+      } catch (e) {
+        toast('打开失败：' + e.message, 2600);
+      }
+      return;
+    }
+    if (++tries > 60) clearInterval(timer);
+  }, 500);
+})();
+
+boot(false);
+  };
+}
+
+function cmtSheet() {
+  if (!state.cur) return;
+  openSheet(
+    '<h3>点评 · ' + esc(state.cur.name) + '</h3>' +
+    '<div class="grp"><textarea id="inCmt" placeholder="写下你的判断…">' + esc(cmts[keyOf(state.cur)] || '') + '</textarea></div>' +
+    '<div class="sheet-btns"><button id="cCancel">取消</button><button id="cSave" class="primary">保存</button></div>'
+  );
+  $('cCancel').onclick = closeSheet;
+  $('cSave').onclick = () => {
+    const k = keyOf(state.cur);
+    const v = $('inCmt').value.trim();
+    if (v) cmts[k] = v; else delete cmts[k];
+    saveCmt();
+    closeSheet();
+    renderList();
+    openDetail(state.cur);
+    toast('已保存');
+  };
+}
+
+/* ==================================================================
+   导入 / 导出
+   ================================================================== */
+function pickFile() {
+  const el = document.createElement('input');
+  el.type = 'file';
+  el.accept = '.txt,text/plain';
+  el.onchange = () => {
+    const f = el.files && el.files[0];
+    if (!f) return;
+    const fr = new FileReader();
+    fr.onload = async () => {
+      try {
+        const d = await decryptText(fr.result);
+        localStorage.setItem(LS.cache, JSON.stringify(d));
+        apply(d, false);
+        toast('导入成功');
+      } catch (e) { toast('导入失败：' + e.message, 2600); }
+    };
+    fr.readAsText(f);
+  };
+  el.click();
+}
+
+function exportData() {
+  if (!state.data) { toast('还没有数据'); return; }
+  const payload = {
+    exported_at: new Date().toISOString(),
+    schema: state.data.meta && state.data.meta.schema,
+    data_generated_at: state.data.meta && state.data.meta.generated_at,
+    favorites: [...favs],
+    comments: cmts,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'stock-judge-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+  toast('已导出');
+}
+
+/* ==================================================================
+   事件绑定
+   ================================================================== */
+$('q').addEventListener('input', (e) => { state.query = e.target.value; renderList(); });
+
+$('btnFav').addEventListener('click', () => {
+  state.onlyFav = !state.onlyFav;
+  $('btnFav').classList.toggle('on', state.onlyFav);
+  renderList();
+});
+
+$('btnMore').addEventListener('click', menuSheet);
+
+$('catSegs').addEventListener('click', (e) => {
+  const b = e.target.closest('.seg'); if (!b) return;
+  state.cat = b.dataset.cat;
+  [...$('catSegs').children].forEach((c) => c.classList.toggle('on', c === b));
+  renderList();
+});
+
+$('stSegs').addEventListener('click', (e) => {
+  const b = e.target.closest('.seg'); if (!b) return;
+  state.concl = b.dataset.st;
+  [...$('stSegs').children].forEach((c) => c.classList.toggle('on', c === b));
+  renderList();
+});
+
+$('listWrap').addEventListener('click', (e) => {
+  const row = e.target.closest('.row'); if (!row) return;
+  const r = findRecord(row.dataset.code, row.dataset.cat);
+  if (r) openDetail(r);
+});
+
+$('btnBack').addEventListener('click', closeDetail);
+
+$('aFav').addEventListener('click', () => {
+  if (!state.cur) return;
+  const k = keyOf(state.cur);
+  if (favs.has(k)) { favs.delete(k); toast('已取消收藏'); } else { favs.add(k); toast('已收藏'); }
+  saveFav(); syncActs(); renderList();
+});
+
+$('aCmt').addEventListener('click', cmtSheet);
+
+$('aCopy').addEventListener('click', () => {
+  if (!state.cur) return;
+  const t = state.cur.code;
+  const done = () => toast('已复制 ' + t);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t).then(done, () => fallbackCopy(t, done));
+  } else fallbackCopy(t, done);
+});
+
+function fallbackCopy(t, done) {
+  const ta = document.createElement('textarea');
+  ta.value = t;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); done(); } catch (e) { toast('复制失败'); }
+  ta.remove();
+}
+
+$('mask').addEventListener('click', (e) => { if (e.target === $('mask')) closeSheet(); });
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { if ($('mask').classList.contains('show')) closeSheet(); else closeDetail(); }
+});
+
+/* 支持从系统「用其他应用打开」传入（Capacitor intent / 自定义 scheme） */
+window.addEventListener('sjOpenFile', (e) => {
+  try { decryptText(e.detail.text).then((d) => { localStorage.setItem(LS.cache, JSON.stringify(d)); apply(d, false); toast('已打开导入的文件'); }); }
+  catch (err) { toast('打开失败：' + err.message); }
+});
+
+boot(false);
+</script>
+</body>
+</html>

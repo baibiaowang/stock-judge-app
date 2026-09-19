@@ -1,0 +1,10 @@
+{
+  "name": "stock-judge-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Stock announcement judge viewer - offline Android APK",
+  "scripts": {
+    "cap:add": "cap add android",
+    "cap:sync": "cap sync android"
+  }
+}

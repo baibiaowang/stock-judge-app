@@ -1,0 +1,11 @@
+{
+  "appId": "com.baibiaowang.stockjudge",
+  "appName": "\u80a1\u7968\u5224\u65ad\u673a",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}
