@@ -1,7 +1,7 @@
 {
   "appId": "com.baibiaowang.stockjudge",
-  "appName": "\u80a1\u7968\u5224\u65ad\u673a",
-  "webDir": "www",
+  "appName": "股票判断机",
+  "webDir": "dist/www",
   "server": {
     "androidScheme": "https"
   },

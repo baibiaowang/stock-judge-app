@@ -67,15 +67,27 @@ jobs:
             fi
           done
 
+      # ★ 放在装依赖之前：inject.mjs 只用 Node 内置模块，早跑能早点暴露密钥问题。
+      # 它读 www/（源文件，含占位符），把注入后的产物写到 dist/www/，源文件不动。
       - name: Inject secrets into web assets
         env:
           AES_KEY: ${{ secrets.AES_KEY }}
           DATA_URL: ${{ secrets.DATA_URL }}
         run: node native/inject.mjs
 
-      - name: Install Capacitor
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('package.json') }}
+          restore-keys: npm-${{ runner.os }}-
+
+      # ★ 2026-09-20：原来这里写的是 @capacitor/*@latest，每次都装最新版 ——
+      # 上游升大版本时会突然要求更高的 Node/JDK，构建直接炸（已经炸过一次）。
+      # 现在版本锁在 package.json 里，这里只按它装。
+      - name: Install dependencies
         run: |
-          npm install --no-audit --no-fund @capacitor/core@latest @capacitor/cli@latest @capacitor/android@latest
+          npm install --no-audit --no-fund
           npx cap --version || true
 
       - name: Add Android platform
@@ -90,6 +102,16 @@ jobs:
       - name: Sync web assets
         run: npx cap sync android
 
+      - name: Cache gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'package.json') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
       - name: Build debug APK
         working-directory: android
         run: |
@@ -102,3 +124,4 @@ jobs:
           name: stock-judge-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          retention-days: 30

@@ -22,10 +22,20 @@ if (m.indexOf(MARK) >= 0) {
   process.exit(0);
 }
 
-const close = '</activity>';
-const idx = m.lastIndexOf(close);
+/* ★ 2026-09-20 修：原实现用 lastIndexOf('</activity>')。
+   manifest 里只要多出一个 activity（插件、别的入口等），
+   intent-filter 就会被注入到**最后一个** activity 上而不是 MainActivity，
+   而且不报错、构建照样成功 —— 表现为「装了 App 但文件管理器里不出现」。
+   现在按 android:name="…MainActivity" 精确定位它所属的 activity 块。 */
+const re = /android:name="(?:[A-Za-z0-9_.]*\.)?MainActivity"/;
+const mt = re.exec(m);
+if (!mt) {
+  console.error('[patch-manifest] cannot find android:name=".MainActivity"');
+  process.exit(1);
+}
+const idx = m.indexOf('</activity>', mt.index);
 if (idx < 0) {
-  console.error('[patch-manifest] cannot find ' + close);
+  console.error('[patch-manifest] cannot find </activity> after MainActivity');
   process.exit(1);
 }
 
@@ -43,4 +53,4 @@ const inject = [
 
 m = m.slice(0, idx) + inject + m.slice(idx);
 fs.writeFileSync(P, m);
-console.log('[patch-manifest] patched ok (offset ' + idx + ')');
+console.log('[patch-manifest] patched ok (MainActivity at ' + mt.index + ', insert at ' + idx + ')');

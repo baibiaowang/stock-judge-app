@@ -314,9 +314,17 @@ function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
+/* ★ 2026-09-20 修：原实现直接用 hex.length/2 建数组，
+   密钥非法时（例如构建忘了注入、占位符还在）会抛
+   `RangeError: Invalid typed array length: 5.5` —— 完全看不懂。
+   现在先校验再建数组，并抛可读错误。 */
 function hexToBytes(hex) {
-  const out = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
+  const s = String(hex == null ? '' : hex).trim();
+  if (!/^[0-9a-fA-F]+$/.test(s) || s.length % 2 !== 0) {
+    throw new Error('密钥不是合法的十六进制串（需要 64 位十六进制）');
+  }
+  const out = new Uint8Array(s.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(s.substr(i * 2, 2), 16);
   return out;
 }
 
@@ -338,9 +346,16 @@ function getUrls() {
   if (custom.length) return custom;
   return String(DEF_URLS).split(/\s*\n\s*/).map((s) => s.trim()).filter((s) => s && s.indexOf('__') !== 0);
 }
+/* ★ 2026-09-20 修：内置密钥也要校验。以前只有「用户手填的」值会被校验，
+   内置值直接返回 —— 构建忘了注入时就会走到 hexToBytes 报看不懂的错。 */
 function getKeyHex() {
   const custom = (localStorage.getItem(LS.key) || '').trim();
-  return /^[0-9a-fA-F]{64}$/.test(custom) ? custom : DEF_KEY;
+  if (/^[0-9a-fA-F]{64}$/.test(custom)) return custom;
+  const builtin = String(DEF_KEY).trim();
+  if (!/^[0-9a-fA-F]{64}$/.test(builtin)) {
+    throw new Error('未配置解密密钥（或格式不对）—— 请在「数据源设置」里填入 64 位十六进制密钥');
+  }
+  return builtin;
 }
 
 function loadLocal() {
@@ -357,7 +372,9 @@ async function decryptBytes(u8) {
   if (u8.length < 33) throw new Error('文件过短');
   const magic = String.fromCharCode(u8[0], u8[1], u8[2], u8[3]);
   if (magic !== 'SJ01') throw new Error('格式不匹配（magic=' + magic + '）');
-  if (!crypto || !crypto.subtle) throw new Error('环境不支持 Web Crypto');
+  if (typeof crypto === 'undefined' || !crypto.subtle) {
+    throw new Error('环境不支持 Web Crypto（file:// 下不可用，请用 http://localhost 打开）');
+  }
   const iv = u8.slice(5, 17);
   const data = u8.slice(17);
   const keyHex = getKeyHex();
@@ -416,25 +433,32 @@ async function boot(silent) {
 function apply(d, isCache) {
   state.data = d;
   const cnt = (d.records || []).length;
-  $('navTitle').textContent = '股票判断机';
   buildSegs();
   renderList();
-  if (isCache) $('navTitle').textContent = '股票判断机 · 缓存';
-  else $('navTitle').textContent = '股票判断机 · ' + cnt + ' 条';
+  /* ★ 2026-09-20 修：只读收藏的高亮以前不会跟着状态走 */
+  $('btnFav').classList.toggle('on', state.onlyFav);
+  $('navTitle').textContent = '股票判断机' + (isCache ? ' · 缓存' : ' · ' + cnt + ' 条');
 }
 
 /* ==================================================================
    分段控件
    ================================================================== */
+/* ★ 2026-09-20 修：原实现每次都用 innerHTML 重建、把高亮无条件设回「全部」，
+   但 state.cat / state.concl 不重置 —— 刷新数据后会出现
+   「按钮高亮在全部、列表却是筛过的」。现在重建时按当前状态回填高亮，
+   并清掉在新数据里已不存在的分类。 */
 function buildSegs() {
   const cats = Object.keys(state.data.judge_tables || {});
+  if (state.cat && cats.indexOf(state.cat) < 0) state.cat = '';
   $('catSegs').innerHTML =
-    '<button class="seg on" data-cat="">全部</button>' +
-    cats.map((c) => '<button class="seg" data-cat="' + esc(c) + '">' + esc(c) + '</button>').join('');
+    '<button class="seg' + (state.cat ? '' : ' on') + '" data-cat="">全部</button>' +
+    cats.map((c) => '<button class="seg' + (state.cat === c ? ' on' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</button>').join('');
+
   const sts = ['有利', '不利', '待定', '否决'];
+  if (state.concl && sts.indexOf(state.concl) < 0) state.concl = '';
   $('stSegs').innerHTML =
-    '<button class="seg on" data-st="">全部结论</button>' +
-    sts.map((s) => '<button class="seg" data-st="' + esc(s) + '">' + esc(s) + '</button>').join('');
+    '<button class="seg' + (state.concl ? '' : ' on') + '" data-st="">全部结论</button>' +
+    sts.map((s) => '<button class="seg' + (state.concl === s ? ' on' : '') + '" data-st="' + esc(s) + '">' + esc(s) + '</button>').join('');
 }
 
 /* ==================================================================
@@ -481,6 +505,42 @@ function renderList() {
     (rows.length > CAP ? '<div class="empty" style="padding:16px">请用搜索或筛选缩小范围</div>' : '');
 }
 
+/* ★ 2026-09-20 新增：只更新一行，不重建整个列表。
+   以前收藏/点评都会调 renderList()，把最多 500 行 DOM 全部重建 ——
+   既卡顿，又把列表滚动位置清掉（从详情返回就回到顶部）。 */
+function findRowEl(k) {
+  const rows = document.querySelectorAll('#listWrap .row');
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].dataset.code + '|' + rows[i].dataset.cat === k) return rows[i];
+  }
+  return null;
+}
+
+function updateRowStar(k) {
+  const row = findRowEl(k);
+  if (!row) return;
+  const t1 = row.querySelector('.t1');
+  if (!t1) return;
+  const star = t1.querySelector('.star');
+  if (favs.has(k) && !star) t1.insertAdjacentHTML('beforeend', '<span class="star">★</span>');
+  else if (!favs.has(k) && star) star.remove();
+}
+
+function updateRowCmt(k) {
+  const row = findRowEl(k);
+  if (!row) return;
+  const main = row.querySelector('.main');
+  if (!main) return;
+  let t3 = main.querySelector('.t3');
+  const v = cmts[k];
+  if (v) {
+    if (!t3) { t3 = document.createElement('div'); t3.className = 't3'; main.appendChild(t3); }
+    t3.textContent = '✎ ' + v;
+  } else if (t3) {
+    t3.remove();
+  }
+}
+
 /* ==================================================================
    详情
    ================================================================== */
@@ -489,8 +549,14 @@ function findRecord(code, cat) {
 }
 
 function openDetail(r) {
+  /* ★ 2026-09-20 修：「展开全部」按钮点了没反应。
+     原因是 openDetail 一进来就把 annShown 重置成 30，
+     而按钮的 onclick 是「先设成 anns.length、再调 openDetail」——
+     设完立刻被改回去。现在同一条记录重入时保留 annShown。 */
+  const same = !!(state.cur && state.cur.code === r.code && state.cur.category === r.category);
   state.cur = r;
-  state.annShown = 30;
+  if (!same) state.annShown = 30;
+
   const d = state.data;
   const colors = (d.display && d.display.status_color) || {};
   const stColor = colors[r.conclusion] || 'var(--gray)';
@@ -513,13 +579,22 @@ function openDetail(r) {
   if (t) {
     const cols = t.columns || ['判断问题', '性质', '作用'];
     const hitColor = (d.display && d.display.hit_color) || {};
-    const groups = ['有利', '不利', '中性', '待定'];
+    /* ★ 2026-09-20 修：分组以前写死 ['有利','不利','中性','待定']，
+       判断表里只要出现第 5 种「性质」，那些行会一行都不渲染、且不报错。
+       现在从数据里动态取，再按偏好顺序排。 */
+    const PREF = ['有利', '不利', '中性', '待定'];
+    const groups = [];
+    (t.rows || []).forEach((row) => { if (groups.indexOf(row[1]) < 0) groups.push(row[1]); });
+    groups.sort((a, b) => {
+      const ia = PREF.indexOf(a), ib = PREF.indexOf(b);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
     let tbody = '';
     groups.forEach((g) => {
       const idx = [];
-      t.rows.forEach((row, i) => { if (row[1] === g) idx.push(i); });
+      (t.rows || []).forEach((row, i) => { if (row[1] === g) idx.push(i); });
       if (!idx.length) return;
-      tbody += '<tr class="grp"><td colspan="' + (cols.length + 1) + '">' + g + '条件 · ' + idx.length + ' 条</td></tr>';
+      tbody += '<tr class="grp"><td colspan="' + (cols.length + 1) + '">' + esc(g) + '条件 · ' + idx.length + ' 条</td></tr>';
       idx.forEach((i) => {
         const hit = (r.judge && r.judge[i]) || '不确定';
         tbody += '<tr><td>' + esc(t.rows[i][0]) + '</td><td>' + esc(t.rows[i][2]) + '</td>' +
@@ -659,7 +734,9 @@ function cmtSheet() {
     if (v) cmts[k] = v; else delete cmts[k];
     saveCmt();
     closeSheet();
-    renderList();
+    /* ★ 2026-09-20 修：原来这里 renderList() 重建整个列表 —— 列表滚动位置会被清掉。
+       改成只更新那一行。 */
+    if (state.onlyFav) renderList(); else updateRowCmt(k);
     openDetail(state.cur);
     toast('已保存');
   };
@@ -747,7 +824,11 @@ $('aFav').addEventListener('click', () => {
   if (!state.cur) return;
   const k = keyOf(state.cur);
   if (favs.has(k)) { favs.delete(k); toast('已取消收藏'); } else { favs.add(k); toast('已收藏'); }
-  saveFav(); syncActs(); renderList();
+  saveFav();
+  syncActs();
+  /* ★ 2026-09-20 修：原来无条件 renderList()，重建整个列表。
+     只在「只看收藏」模式下需要重建（那一行要消失），否则局部更新即可。 */
+  if (state.onlyFav) renderList(); else updateRowStar(k);
 });
 
 $('aCmt').addEventListener('click', cmtSheet);
@@ -779,9 +860,21 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* 支持从系统「用其他应用打开」传入（Capacitor intent / 自定义 scheme） */
+/* ★ 2026-09-20 修：原写法 try/catch 包不住 async —— decryptText 返回 Promise，
+   .then 里的 rejection 不会被外层 catch 捕获，用户看不到任何错误（未处理的 rejection）。
+   现在补 .catch。 */
 window.addEventListener('sjOpenFile', (e) => {
-  try { decryptText(e.detail.text).then((d) => { localStorage.setItem(LS.cache, JSON.stringify(d)); apply(d, false); toast('已打开导入的文件'); }); }
-  catch (err) { toast('打开失败：' + err.message); }
+  try {
+    decryptText(e.detail.text)
+      .then((d) => {
+        localStorage.setItem(LS.cache, JSON.stringify(d));
+        apply(d, false);
+        toast('已打开导入的文件');
+      })
+      .catch((err) => toast('打开失败：' + err.message, 2600));
+  } catch (err) {
+    toast('打开失败：' + err.message, 2600);
+  }
 });
 
 /* ==================================================================
