@@ -4,87 +4,120 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#C8102E">
 <title>股票判断机</title>
 <style>
-/* ============ 设计令牌（iOS 系统色） ============ */
+/* ==================================================================
+   设计令牌
+   - 主视觉：浓郁红（品牌区 / 选中态 / 主按钮）
+   - 语义色：只用在「结论 / 命中」这类数据上，不参与品牌表达
+   - 圆角卡片 + 半透明底栏（Apple 风）
+   ================================================================== */
 :root{
-  --bg:#f2f2f7; --bg-elev:#ffffff; --bg-group:#ffffff;
+  --bg:#f5f5f7; --bg-elev:#ffffff; --bg-group:#ffffff;
   --fill-1:rgba(120,120,128,.12); --fill-2:rgba(120,120,128,.16); --fill-3:rgba(120,120,128,.08);
-  --text:#000; --text-2:rgba(60,60,67,.6); --text-3:rgba(60,60,67,.3);
-  --sep:rgba(60,60,67,.29); --sep-op:rgba(60,60,67,.12);
-  --blue:#007aff; --green:#34c759; --red:#ff3b30; --orange:#ff9500; --darkred:#8e0000;
+  --text:#1c1c1e; --text-2:rgba(60,60,67,.62); --text-3:rgba(60,60,67,.32);
+  --sep:rgba(60,60,67,.29); --sep-op:rgba(60,60,67,.10);
+
+  --brand:#C8102E; --brand-deep:#8E0000;
+  --brand-soft:rgba(200,16,46,.10); --brand-line:rgba(200,16,46,.22);
+  --grad:linear-gradient(158deg,#C8102E 0%,#8E0000 100%);
+  --on-brand:#ffffff; --on-brand-2:rgba(255,255,255,.82);
+  --fill-on-brand:rgba(255,255,255,.20); --fill-on-brand-2:rgba(255,255,255,.30);
+
+  --c-good:#34c759; --c-bad:#ff3b30; --c-wait:#ff9500; --c-veto:#5B0E1E;
   --gray:#8e8e93;
-  --nav-bg:rgba(249,249,249,.82);
-  --radius:12px; --radius-lg:14px;
+
+  --nav-bg:rgba(249,249,249,.80);
+  --radius:16px; --radius-sm:11px;
   --shadow:0 1px 3px rgba(0,0,0,.06);
 }
 @media (prefers-color-scheme: dark){
   :root{
     --bg:#000; --bg-elev:#1c1c1e; --bg-group:#1c1c1e;
     --fill-1:rgba(120,120,128,.24); --fill-2:rgba(120,120,128,.32); --fill-3:rgba(120,120,128,.18);
-    --text:#fff; --text-2:rgba(235,235,245,.6); --text-3:rgba(235,235,245,.3);
-    --sep:rgba(84,84,88,.65); --sep-op:rgba(84,84,88,.4);
-    --blue:#0a84ff; --green:#30d158; --red:#ff453a; --orange:#ff9f0a; --darkred:#ff6961;
+    --text:#fff; --text-2:rgba(235,235,245,.62); --text-3:rgba(235,235,245,.32);
+    --sep:rgba(84,84,88,.65); --sep-op:rgba(84,84,88,.42);
+
+    --brand:#ff453a; --brand-deep:#C8102E;
+    --brand-soft:rgba(255,69,58,.16); --brand-line:rgba(255,69,58,.32);
+    --grad:linear-gradient(158deg,#B00020 0%,#5A0000 100%);
+    --on-brand:#ffffff; --on-brand-2:rgba(255,255,255,.80);
+    --fill-on-brand:rgba(255,255,255,.20); --fill-on-brand-2:rgba(255,255,255,.30);
+
+    --c-good:#30d158; --c-bad:#ff453a; --c-wait:#ff9f0a; --c-veto:#E8A9B8;
     --gray:#98989d;
-    --nav-bg:rgba(30,30,32,.8);
+
+    --nav-bg:rgba(28,28,30,.80);
     --shadow:none;
   }
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;overscroll-behavior-y:none}
+/* ★ 宽度铁律：整页绝不横向滚动（原先 table{min-width:430px} 是元凶，已整表删除） */
+html,body{margin:0;height:100%;max-width:100%;overflow-x:hidden;overscroll-behavior-y:none}
 body{
   background:var(--bg);color:var(--text);
   font:17px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
   -webkit-font-smoothing:antialiased;
 }
-button,input,textarea{font:inherit;color:inherit;font-family:inherit}
+img,svg,canvas,video{max-width:100%;height:auto}
+button,input,textarea{font:inherit;color:inherit;font-family:inherit;max-width:100%}
 a{color:inherit;text-decoration:none}
+.wrap,.card,.row,.ann,.jrow,.card-pad,.jq,.jrole,.t1,.t2,.t3{overflow-wrap:anywhere;word-break:break-word}
 
-/* ============ 顶栏 ============ */
+/* ==================================================================
+   顶栏（品牌红，粘顶，含安全区）
+   ================================================================== */
 .nav{
   position:sticky;top:0;z-index:30;
-  background:var(--nav-bg);
-  -webkit-backdrop-filter:saturate(180%) blur(20px);
-  backdrop-filter:saturate(180%) blur(20px);
-  border-bottom:.5px solid var(--sep-op);
+  background:var(--grad);
+  border-bottom:.5px solid var(--brand-line);
+  padding:0 0 8px;
   padding-top:env(safe-area-inset-top);
 }
 .nav-row{display:flex;align-items:center;gap:8px;padding:8px 16px 0;min-height:44px}
-.nav-title{flex:1;font-size:17px;font-weight:600;letter-spacing:-.2px}
+.nav-title{flex:1;min-width:0;font-size:17px;font-weight:700;letter-spacing:-.2px;color:var(--on-brand);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nav-btn{
-  border:0;background:var(--fill-1);color:var(--blue);border-radius:50%;
-  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  border:0;background:var(--fill-on-brand);color:var(--on-brand);border-radius:50%;
+  width:32px;height:32px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
   font-size:15px;padding:0;transition:transform .12s,background .12s;
 }
-.nav-btn:active{transform:scale(.9);background:var(--fill-2)}
-.nav-btn.on{background:var(--blue);color:#fff}
-.search{padding:8px 16px 10px}
+.nav-btn:active{transform:scale(.9);background:var(--fill-on-brand-2)}
+.nav-btn.on{background:#fff;color:var(--brand)}
+.search{padding:8px 16px 8px}
 .search input{
-  width:100%;height:36px;border:0;border-radius:10px;padding:0 12px;
-  background:var(--fill-1);outline:none;font-size:16px;
+  width:100%;height:36px;border:0;border-radius:var(--radius-sm);padding:0 12px;
+  background:var(--fill-on-brand);outline:none;font-size:16px;color:var(--on-brand);
 }
-.search input::placeholder{color:var(--text-3)}
-
-/* ============ 分段控件 ============ */
-.segs-wrap{padding:0 16px 8px}
+.search input::placeholder{color:var(--on-brand-2)}
+.segs-wrap{padding:0 16px 6px}
+/* 分段控件：自动换行。
+   原来是 overflow-x:auto 横向滚动，最右一个分类会被切一半 ——
+   和「一页完全显示」的要求直接冲突，改成换行后彻底不出滚动条。 */
 .segs{
-  display:flex;gap:2px;background:var(--fill-1);border-radius:9px;padding:2px;
-  overflow-x:auto;scrollbar-width:none;
+  display:flex;flex-wrap:wrap;gap:4px;background:var(--fill-on-brand);
+  border-radius:9px;padding:3px;
 }
-.segs::-webkit-scrollbar{display:none}
 .seg{
-  flex:1 0 auto;border:0;background:transparent;color:var(--text);
-  font-size:13px;font-weight:500;padding:6px 12px;border-radius:7px;
-  white-space:nowrap;transition:background .15s;
+  flex:1 1 auto;min-width:0;border:0;background:transparent;color:var(--on-brand-2);
+  font-size:13px;font-weight:500;padding:6px 10px;border-radius:7px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:background .15s,color .15s;
 }
-.seg.on{background:var(--bg-elev);box-shadow:0 3px 8px rgba(0,0,0,.12);font-weight:600}
+.seg.on{background:#fff;color:var(--brand);font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.16)}
 
-/* ============ 列表 ============ */
-.wrap{padding:0 16px calc(100px + env(safe-area-inset-bottom))}
-.group{background:var(--bg-group);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:16px}
+/* ==================================================================
+   列表
+   ================================================================== */
+.wrap{padding:0 16px calc(120px + env(safe-area-inset-bottom))}
+.big{padding:18px 2px 8px}
+.big h1{margin:0;font-size:30px;line-height:1.15;font-weight:800;letter-spacing:-.7px;color:var(--brand)}
+.big-sub{margin-top:5px;font-size:13px;color:var(--text-2)}
+
+.group{background:var(--bg-group);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:14px}
 .group-hd{
-  font-size:13px;color:var(--text-2);padding:0 16px 6px;text-transform:none;
-  display:flex;justify-content:space-between;align-items:baseline;
+  font-size:13px;color:var(--text-2);padding:2px 4px 6px;
+  display:flex;justify-content:space-between;align-items:baseline;gap:8px;
 }
 .row{
   display:flex;align-items:center;gap:12px;padding:11px 16px;
@@ -92,84 +125,86 @@ a{color:inherit;text-decoration:none}
   position:relative;
 }
 .row:last-child{border-bottom:0}
-.row:active{background:var(--fill-3)}
+.row:active{background:var(--brand-soft)}
 .row .main{flex:1;min-width:0}
-.row .t1{font-size:16px;font-weight:500;letter-spacing:-.2px;display:flex;align-items:center;gap:5px}
+.row .t1{font-size:16px;font-weight:600;letter-spacing:-.2px;display:flex;align-items:center;gap:5px}
 .row .t2{font-size:13px;color:var(--text-2);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .row .t3{font-size:12.5px;color:var(--text-2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.star{color:var(--orange);font-size:13px}
+.star{color:var(--c-wait);font-size:13px}
 .tag{
   font-size:11.5px;padding:1.5px 7px;border-radius:6px;
   background:var(--fill-1);color:var(--text-2);font-weight:500;
 }
-.tag.cat{background:rgba(0,122,255,.12);color:var(--blue)}
+.tag.cat{background:var(--brand-soft);color:var(--brand)}
 .pill{
-  font-size:12px;font-weight:600;padding:3px 10px;border-radius:100px;color:#fff;
-  letter-spacing:.2px;flex:0 0 auto;
+  font-size:12px;font-weight:700;padding:3px 10px;border-radius:100px;color:#fff;
+  letter-spacing:.2px;flex:0 0 auto;white-space:nowrap;
 }
 .chev{color:var(--text-3);font-size:15px;flex:0 0 auto}
 
-/* ============ 详情 ============ */
+/* ==================================================================
+   详情
+   ================================================================== */
 .detail{
   position:fixed;inset:0;z-index:60;background:var(--bg);overflow-y:auto;
   -webkit-overflow-scrolling:touch;
   transform:translateX(100%);transition:transform .28s cubic-bezier(.32,.72,0,1);
-  padding-bottom:calc(96px + env(safe-area-inset-bottom));
+  padding-bottom:calc(112px + env(safe-area-inset-bottom));
 }
 .detail.show{transform:translateX(0)}
+/* ★ 返回按钮被状态栏压住的根因：先写 padding 简写、再写 padding-top 覆盖。
+   顺序反了就白写。这里必须「简写在前、padding-top 在后」。 */
 .dnav{
-  position:sticky;top:0;z-index:5;background:var(--nav-bg);
-  -webkit-backdrop-filter:saturate(180%) blur(20px);
-  backdrop-filter:saturate(180%) blur(20px);
-  border-bottom:.5px solid var(--sep-op);
-  padding-top:env(safe-area-inset-top);
-  display:flex;align-items:center;gap:6px;padding:8px 12px;min-height:48px;
+  position:sticky;top:0;z-index:5;background:var(--grad);
+  border-bottom:.5px solid var(--brand-line);
+  padding:8px 12px;
+  padding-top:calc(8px + env(safe-area-inset-top));
+  display:flex;align-items:center;gap:6px;min-height:48px;
 }
-.dnav .back{border:0;background:none;color:var(--blue);font-size:17px;padding:4px 2px;display:flex;align-items:center;gap:2px}
+.dnav .back{border:0;background:none;color:var(--on-brand);font-size:17px;padding:4px 2px;display:flex;align-items:center;gap:2px;flex:0 0 auto}
 .dnav .back:active{opacity:.5}
-.dnav .dt{flex:1;min-width:0;font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
-.dbody{padding:16px}
-.hero{padding:4px 16px 16px}
-.hero h1{margin:0;font-size:28px;font-weight:700;letter-spacing:-.6px;line-height:1.15}
-.hero .meta{margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dnav .dt{flex:1;min-width:0;font-size:16px;font-weight:700;color:var(--on-brand);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+.dnav .pad{width:52px;flex:0 0 auto}
+.dbody{padding:14px 16px 0}
+.hero{padding:18px 16px 14px}
+.hero h1{margin:0;font-size:27px;font-weight:800;letter-spacing:-.6px;line-height:1.15}
+.hero .meta{margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 
-.card{background:var(--bg-group);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:16px}
+.card{background:var(--bg-group);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:14px}
 .card-hd{
-  font-size:13px;font-weight:600;color:var(--text-2);
-  padding:10px 16px 8px;border-bottom:.5px solid var(--sep-op);
+  font-size:13px;font-weight:700;color:var(--text-2);
+  padding:11px 16px 9px;border-bottom:.5px solid var(--sep-op);
   display:flex;justify-content:space-between;align-items:center;gap:8px;
 }
-.card-hd .sub{font-weight:400;color:var(--text-3);font-size:12px}
-.card-pad{padding:14px 16px;font-size:15.5px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word}
+.card-hd .sub{font-weight:400;color:var(--text-3);font-size:12px;text-align:right;min-width:0}
+.card-pad{padding:14px 16px;font-size:15.5px;line-height:1.65;color:var(--text);white-space:pre-wrap}
 
-/* 判断机结果表 */
-.tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-table{border-collapse:collapse;width:100%;min-width:430px;font-size:13.5px}
-th,td{border-bottom:.5px solid var(--sep-op);padding:9px 12px;text-align:left;vertical-align:top}
-th{background:var(--fill-3);font-weight:600;color:var(--text-2);white-space:nowrap;font-size:12.5px}
-tr:last-child td{border-bottom:0}
-td.hit{font-weight:600;white-space:nowrap}
-.grp td{
-  font-size:12px;font-weight:600;color:var(--text-2);background:var(--fill-3);
-  padding:6px 12px;
-}
+/* 判断机结果：纵向卡片（替代原来的横向 table，列错位与横向滚动一并消失） */
+.jgrp{font-size:12px;font-weight:700;color:var(--brand);background:var(--brand-soft);padding:6px 16px;letter-spacing:.2px}
+.jrow{padding:11px 16px;border-bottom:.5px solid var(--sep-op)}
+.jrow:last-child{border-bottom:0}
+.jq{font-size:14.5px;line-height:1.45;color:var(--text)}
+.jm{margin-top:6px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.jhit{font-size:12.5px;font-weight:700;flex:0 0 auto}
+.jrole{font-size:12.5px;color:var(--text-2);flex:1;min-width:0}
 
 /* 公告列表 */
 .ann{display:block;padding:11px 16px;border-bottom:.5px solid var(--sep-op);transition:background .12s}
 .ann:last-child{border-bottom:0}
-.ann:active{background:var(--fill-3)}
+.ann:active{background:var(--brand-soft)}
 .ann .at{font-size:14.5px;line-height:1.45;color:var(--text);display:flex;gap:8px;align-items:flex-start}
+.ann .at .tx{flex:1;min-width:0}
 .ann .at .ext{color:var(--text-3);font-size:12px;flex:0 0 auto;margin-top:2px}
 .ann .am{font-size:12px;color:var(--text-2);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap}
 .more{
-  width:100%;border:0;background:transparent;color:var(--blue);
-  font-size:14.5px;font-weight:500;padding:12px;border-top:.5px solid var(--sep-op);
+  width:100%;border:0;background:transparent;color:var(--brand);
+  font-size:14.5px;font-weight:600;padding:13px;border-top:.5px solid var(--sep-op);
 }
-.more:active{background:var(--fill-3)}
+.more:active{background:var(--brand-soft)}
 .empty-row{padding:20px 16px;text-align:center;color:var(--text-3);font-size:14px}
-.empty{text-align:center;color:var(--text-2);padding:60px 32px;font-size:15px;line-height:1.7}
+.empty{text-align:center;color:var(--text-2);padding:56px 24px;font-size:15px;line-height:1.7;overflow-wrap:anywhere}
 
-/* 底部操作条 */
+/* 底部操作条（半透明） */
 .acts{
   position:fixed;left:0;right:0;bottom:0;z-index:70;
   background:var(--nav-bg);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
@@ -179,28 +214,30 @@ td.hit{font-weight:600;white-space:nowrap}
 }
 .acts.show{transform:translateY(0)}
 .acts button{
-  flex:1;border:0;background:var(--fill-1);border-radius:11px;padding:11px 0;
-  font-size:15px;font-weight:500;transition:transform .12s,background .12s;
+  flex:1;min-width:0;border:0;background:var(--fill-1);border-radius:var(--radius-sm);padding:11px 0;
+  font-size:15px;font-weight:600;transition:transform .12s,background .12s;
 }
 .acts button:active{transform:scale(.96)}
-.acts button.primary{background:var(--blue);color:#fff}
-.acts button.fav-on{background:rgba(255,149,0,.16);color:var(--orange)}
+.acts button.primary{background:var(--grad);color:#fff}
+.acts button.fav-on{background:rgba(255,149,0,.16);color:var(--c-wait)}
 
-/* ============ 弹层（sheet） ============ */
+/* ==================================================================
+   弹层（sheet）
+   ================================================================== */
 .mask{
   position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.4);
   display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .25s;
 }
 .mask.show{opacity:1;pointer-events:auto}
 .sheet{
-  width:100%;background:var(--bg-elev);border-radius:14px 14px 0 0;
+  width:100%;max-width:100%;background:var(--bg-elev);border-radius:18px 18px 0 0;
   padding:0 0 calc(12px + env(safe-area-inset-bottom));
   transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);
   max-height:88vh;overflow-y:auto;
 }
 .mask.show .sheet{transform:translateY(0)}
 .sheet-grab{width:36px;height:5px;border-radius:3px;background:var(--fill-2);margin:8px auto 4px}
-.sheet h3{margin:6px 20px 12px;font-size:17px;font-weight:600}
+.sheet h3{margin:6px 20px 12px;font-size:17px;font-weight:700;overflow-wrap:anywhere}
 .sheet .grp{margin:0 16px 14px;background:var(--bg);border-radius:var(--radius);overflow:hidden}
 .sheet label{display:block;font-size:13px;color:var(--text-2);padding:12px 14px 4px}
 .sheet input[type=text],.sheet textarea{
@@ -216,26 +253,26 @@ td.hit{font-weight:600;white-space:nowrap}
 }
 .sheet-item:last-child{border-bottom:0}
 .sheet-item:active{background:var(--fill-3)}
-.sheet-item .ic{width:22px;text-align:center;color:var(--blue)}
-.sheet-item .tx{flex:1}
-.sheet-item .danger{color:var(--red)}
+.sheet-item .ic{width:22px;text-align:center;color:var(--brand);flex:0 0 auto}
+.sheet-item .tx{flex:1;min-width:0;overflow-wrap:anywhere}
+.sheet-item .chev{color:var(--text-3);font-size:15px;flex:0 0 auto}
 .sheet-btns{display:flex;gap:10px;padding:0 16px 8px}
 .sheet-btns button{
-  flex:1;border:0;border-radius:11px;padding:12px 0;font-size:16px;font-weight:500;
+  flex:1;min-width:0;border:0;border-radius:var(--radius-sm);padding:12px 0;font-size:16px;font-weight:600;
   background:var(--fill-1);
 }
-.sheet-btns button.primary{background:var(--blue);color:#fff}
+.sheet-btns button.primary{background:var(--grad);color:#fff}
 .sheet-btns button:active{transform:scale(.97)}
 
 /* toast */
 .toast{
   position:fixed;left:50%;bottom:120px;transform:translateX(-50%) translateY(8px);z-index:200;
-  background:rgba(0,0,0,.82);color:#fff;padding:9px 18px;border-radius:100px;font-size:14px;
-  opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;max-width:80vw;text-align:center;
+  background:rgba(0,0,0,.84);color:#fff;padding:9px 18px;border-radius:100px;font-size:14px;
+  opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;max-width:84vw;text-align:center;
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .spin{
-  width:22px;height:22px;border:2.5px solid var(--fill-2);border-top-color:var(--blue);
+  width:22px;height:22px;border:2.5px solid var(--fill-2);border-top-color:var(--brand);
   border-radius:50%;animation:sp .8s linear infinite;margin:0 auto 14px;
 }
 @keyframes sp{to{transform:rotate(360deg)}}
@@ -256,8 +293,14 @@ td.hit{font-weight:600;white-space:nowrap}
 </div>
 
 <!-- 列表 -->
-<div class="wrap" id="listWrap">
-  <div class="empty"><div class="spin"></div>正在加载…</div>
+<div class="wrap">
+  <div class="big">
+    <h1 id="bigTitle">股票判断机</h1>
+    <div class="big-sub" id="bigSub">正在加载…</div>
+  </div>
+  <div id="listWrap">
+    <div class="empty"><div class="spin"></div>正在加载…</div>
+  </div>
 </div>
 
 <!-- 详情 -->
@@ -265,7 +308,7 @@ td.hit{font-weight:600;white-space:nowrap}
   <div class="dnav">
     <button class="back" id="btnBack">‹ 返回</button>
     <div class="dt" id="dTitle"></div>
-    <div style="width:52px"></div>
+    <div class="pad"></div>
   </div>
   <div id="dHero"></div>
   <div class="dbody" id="dBody"></div>
@@ -294,10 +337,20 @@ const LS = {
   urls: 'sj.urls.v3', key: 'sj.key.v3',
 };
 
+const PAGE = 200;          /* 每批渲染条数（触底自动续，不再截断） */
+const ANN_STEP = 30;       /* 公告每次展开条数 */
+const POLL_MAX = 240;      /* 外部文件轮询上限：240 × 500ms = 120 秒 */
+
 /* ==================================================================
    状态
+   kind: remote（线上拉取）| cache（本地缓存）| local（外部/本地文件导入）
+   local 的数据不会被后台刷新覆盖
    ================================================================== */
-const state = { data: null, query: '', cat: '', concl: '', onlyFav: false, cur: null, annShown: 30 };
+const state = {
+  data: null, kind: null,
+  query: '', cat: '', concl: '', onlyFav: false,
+  cur: null, annShown: ANN_STEP, shown: PAGE,
+};
 let favs = new Set(), cmts = {};
 
 const $ = (id) => document.getElementById(id);
@@ -314,10 +367,8 @@ function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
-/* ★ 2026-09-20 修：原实现直接用 hex.length/2 建数组，
-   密钥非法时（例如构建忘了注入、占位符还在）会抛
-   `RangeError: Invalid typed array length: 5.5` —— 完全看不懂。
-   现在先校验再建数组，并抛可读错误。 */
+/* ★ 原实现直接用 hex.length/2 建数组，密钥非法时（构建漏注入、占位符还在）
+   会抛 `RangeError: Invalid typed array length: 5.5`，完全看不懂。先校验再建。 */
 function hexToBytes(hex) {
   const s = String(hex == null ? '' : hex).trim();
   if (!/^[0-9a-fA-F]+$/.test(s) || s.length % 2 !== 0) {
@@ -339,6 +390,65 @@ function b64ToBytes(b64) {
 const keyOf = (r) => r.code + '|' + r.category;
 
 /* ==================================================================
+   IndexedDB 缓存
+   ★ 解密后的 JSON 约 2MB，localStorage 在 WebView 里配额很小，
+     写不进去会抛 QuotaExceededError —— 页面因此显示「加载失败」，
+     明明数据已经下载成功。改用 IndexedDB，localStorage 仅作兜底。
+   ================================================================== */
+const IDB = (() => {
+  const DB = 'stockjudge', STORE = 'kv', VER = 1;
+  let dbp = null;
+  function open() {
+    if (dbp) return dbp;
+    dbp = new Promise((res, rej) => {
+      let req;
+      try { req = indexedDB.open(DB, VER); } catch (e) { rej(e); return; }
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+      };
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error || new Error('indexedDB open failed'));
+    });
+    return dbp;
+  }
+  function tx(mode, fn) {
+    return open().then((db) => new Promise((res, rej) => {
+      let t;
+      try { t = db.transaction(STORE, mode); } catch (e) { rej(e); return; }
+      const store = t.objectStore(STORE);
+      let r;
+      try { r = fn(store); } catch (e) { rej(e); return; }
+      t.oncomplete = () => res(r ? r.result : undefined);
+      t.onerror = () => rej(t.error || new Error('idb tx error'));
+      t.onabort = () => rej(t.error || new Error('idb tx aborted'));
+    }));
+  }
+  return {
+    get: (k) => tx('readonly', (s) => s.get(k)),
+    set: (k, v) => tx('readwrite', (s) => s.put(v, k)),
+    del: (k) => tx('readwrite', (s) => s.delete(k)),
+  };
+})();
+
+const Cache = {
+  async get() {
+    try { const v = await IDB.get('data'); if (v) return v; } catch (e) { /* 落到 localStorage */ }
+    try { return JSON.parse(localStorage.getItem(LS.cache) || 'null'); } catch (e) { return null; }
+  },
+  async set(d) {
+    try { await IDB.set('data', d); try { localStorage.removeItem(LS.cache); } catch (e) {} return true; }
+    catch (e) {
+      try { localStorage.setItem(LS.cache, JSON.stringify(d)); return true; } catch (e2) { return false; }
+    }
+  },
+  async clear() {
+    try { await IDB.del('data'); } catch (e) {}
+    try { localStorage.removeItem(LS.cache); } catch (e) {}
+  },
+};
+
+/* ==================================================================
    设置读写
    ================================================================== */
 function getUrls() {
@@ -346,8 +456,8 @@ function getUrls() {
   if (custom.length) return custom;
   return String(DEF_URLS).split(/\s*\n\s*/).map((s) => s.trim()).filter((s) => s && s.indexOf('__') !== 0);
 }
-/* ★ 2026-09-20 修：内置密钥也要校验。以前只有「用户手填的」值会被校验，
-   内置值直接返回 —— 构建忘了注入时就会走到 hexToBytes 报看不懂的错。 */
+/* 内置密钥也要校验：以前只有「手填的」会被校验，内置值直接返回 ——
+   构建漏注入时会走到 hexToBytes 报看不懂的错。 */
 function getKeyHex() {
   const custom = (localStorage.getItem(LS.key) || '').trim();
   if (/^[0-9a-fA-F]{64}$/.test(custom)) return custom;
@@ -362,8 +472,8 @@ function loadLocal() {
   try { favs = new Set(JSON.parse(localStorage.getItem(LS.fav) || '[]')); } catch (e) { favs = new Set(); }
   try { cmts = JSON.parse(localStorage.getItem(LS.cmt) || '{}'); } catch (e) { cmts = {}; }
 }
-const saveFav = () => localStorage.setItem(LS.fav, JSON.stringify([...favs]));
-const saveCmt = () => localStorage.setItem(LS.cmt, JSON.stringify(cmts));
+const saveFav = () => { try { localStorage.setItem(LS.fav, JSON.stringify([...favs])); } catch (e) {} };
+const saveCmt = () => { try { localStorage.setItem(LS.cmt, JSON.stringify(cmts)); } catch (e) {} };
 
 /* ==================================================================
    解密：txt(base64) -> bytes -> AES-256-GCM -> JSON
@@ -404,57 +514,105 @@ async function loadFromUrls(urls) {
 
 /* ==================================================================
    启动
+   force = true 时忽略「本地导入」的保护，强制走线上（用户点了「重新加载数据」）
    ================================================================== */
-async function boot(silent) {
+async function boot(silent, force) {
   loadLocal();
-  const cached = (() => { try { return JSON.parse(localStorage.getItem(LS.cache) || 'null'); } catch (e) { return null; } })();
-  if (cached) apply(cached, true);
+
+  if (state.kind === 'local' && !force) {
+    if (!silent) toast('当前显示的是本地导入的数据；点「重新加载数据」可切回线上');
+    return;
+  }
+
+  let cached = null;
+  try { cached = await Cache.get(); } catch (e) { cached = null; }
+  if (cached && state.kind !== 'local') apply(cached, 'cache');
 
   const urls = getUrls();
   if (!urls.length) {
     if (!cached) {
       $('listWrap').innerHTML = '<div class="empty">未配置数据地址<br><br>点右上角 ⋯ → 数据源设置，或从本地文件导入 txt</div>';
+      $('bigSub').textContent = '未配置数据源';
     }
     return;
   }
 
   if (!silent && !cached) $('listWrap').innerHTML = '<div class="empty"><div class="spin"></div>正在加载…</div>';
+
+  let d = null;
   try {
-    const d = await loadFromUrls(urls);
-    localStorage.setItem(LS.cache, JSON.stringify(d));
-    apply(d, false);
-    if (silent) toast('已更新到最新数据');
+    d = await loadFromUrls(urls);
   } catch (e) {
-    if (!cached) $('listWrap').innerHTML = '<div class="empty">加载失败<br><br>' + esc(e.message) + '<br><br>点右上角 ⋯ 检查数据源或从本地导入</div>';
-    else toast('更新失败，显示缓存数据');
+    if (!cached) {
+      $('listWrap').innerHTML = '<div class="empty">加载失败<br><br>' + esc(e.message) + '<br><br>点右上角 ⋯ 检查数据源或从本地导入</div>';
+      $('bigSub').textContent = '加载失败';
+    } else {
+      toast('更新失败，显示缓存数据');
+    }
+    return;
   }
+
+  /* ★ 关键：下载解密已成功 —— 缓存写失败绝不能把页面变成「加载失败」。
+     两件事拆成两个 try，缓存问题只降级成一条提示。 */
+  try {
+    const ok = await Cache.set(d);
+    if (!ok) toast('数据已加载（缓存写入失败，下次启动需重新下载）', 2800);
+  } catch (e) {
+    toast('数据已加载（缓存写入失败）', 2400);
+  }
+
+  apply(d, 'remote');
+  if (silent) toast('已更新到最新数据');
 }
 
-function apply(d, isCache) {
+function apply(d, kind) {
   state.data = d;
-  const cnt = (d.records || []).length;
+  state.kind = kind || 'remote';
+  state.shown = PAGE;
   buildSegs();
   renderList();
-  /* ★ 2026-09-20 修：只读收藏的高亮以前不会跟着状态走 */
-  $('btnFav').classList.toggle('on', state.onlyFav);
-  $('navTitle').textContent = '股票判断机' + (isCache ? ' · 缓存' : ' · ' + cnt + ' 条');
+
+  const cnt = (d.records || []).length;
+  const label = state.kind === 'cache' ? '缓存数据' : state.kind === 'local' ? '本地导入' : '实时数据';
+  const when = d.meta && d.meta.generated_at ? ' · ' + String(d.meta.generated_at).slice(0, 16).replace('T', ' ') : '';
+  $('bigSub').textContent = cnt + ' 条记录 · ' + label + when;
+}
+
+/* ==================================================================
+   语义颜色
+   ★ 品牌红留给品牌区 / 选中态 / 主按钮；「否决」用深紫，
+     否则和品牌红糊在一起，读不出区别。
+   ================================================================== */
+const CONCL_PREF = ['有利', '不利', '待定', '否决'];
+const STATUS_OVERRIDE = { '否决': 'var(--c-veto)' };
+function statusColor(c, map) {
+  if (STATUS_OVERRIDE[c]) return STATUS_OVERRIDE[c];
+  if (map && map[c]) return map[c];
+  const m = { '有利': 'var(--c-good)', '不利': 'var(--c-bad)', '待定': 'var(--c-wait)' };
+  return m[c] || 'var(--gray)';
 }
 
 /* ==================================================================
    分段控件
+   ★ 原实现每次 innerHTML 重建、把高亮无条件设回「全部」，但 state.cat /
+     state.concl 不重置 —— 刷新数据后出现「按钮高亮在全部、列表却是筛过的」。
+     现在重建时按当前状态回填，并清掉在新数据里已不存在的选项。
    ================================================================== */
-/* ★ 2026-09-20 修：原实现每次都用 innerHTML 重建、把高亮无条件设回「全部」，
-   但 state.cat / state.concl 不重置 —— 刷新数据后会出现
-   「按钮高亮在全部、列表却是筛过的」。现在重建时按当前状态回填高亮，
-   并清掉在新数据里已不存在的分类。 */
 function buildSegs() {
-  const cats = Object.keys(state.data.judge_tables || {});
+  const d = state.data || {};
+  const cats = Object.keys(d.judge_tables || {});
   if (state.cat && cats.indexOf(state.cat) < 0) state.cat = '';
   $('catSegs').innerHTML =
     '<button class="seg' + (state.cat ? '' : ' on') + '" data-cat="">全部</button>' +
     cats.map((c) => '<button class="seg' + (state.cat === c ? ' on' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</button>').join('');
 
-  const sts = ['有利', '不利', '待定', '否决'];
+  /* ★ 结论选项从数据里动态取（原来写死 4 种，多一种就筛不到） */
+  const sts = [];
+  (d.records || []).forEach((r) => { if (r.conclusion && sts.indexOf(r.conclusion) < 0) sts.push(r.conclusion); });
+  sts.sort((a, b) => {
+    const ia = CONCL_PREF.indexOf(a), ib = CONCL_PREF.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
   if (state.concl && sts.indexOf(state.concl) < 0) state.concl = '';
   $('stSegs').innerHTML =
     '<button class="seg' + (state.concl ? '' : ' on') + '" data-st="">全部结论</button>' +
@@ -462,52 +620,80 @@ function buildSegs() {
 }
 
 /* ==================================================================
-   列表
+   列表（分批渲染 + 触底自动续载）
+   ★ 原实现 CAP = 500 硬截断，501 条之后永远看不到。
    ================================================================== */
-function renderList() {
-  if (!state.data) return;
+let io = null;
+
+function filtered() {
   const q = state.query.trim().toLowerCase();
-  const all = state.data.records || [];
-  const rows = all.filter((r) => {
+  return (state.data.records || []).filter((r) => {
     if (state.cat && r.category !== state.cat) return false;
     if (state.concl && r.conclusion !== state.concl) return false;
     if (state.onlyFav && !favs.has(keyOf(r))) return false;
-    if (q && r.name.toLowerCase().indexOf(q) < 0 && r.code.indexOf(q) < 0) return false;
+    if (q && String(r.name || '').toLowerCase().indexOf(q) < 0 && String(r.code || '').indexOf(q) < 0) return false;
     return true;
   });
+}
+
+function rowHtml(r) {
+  const colors = (state.data.display && state.data.display.status_color) || {};
+  const k = keyOf(r);
+  const c = cmts[k];
+  return '<div class="row" data-code="' + esc(r.code) + '" data-cat="' + esc(r.category) + '">' +
+    '<div class="main">' +
+      '<div class="t1">' + esc(r.name) + (favs.has(k) ? '<span class="star">★</span>' : '') + '</div>' +
+      '<div class="t2"><span class="tag">' + esc(r.code) + '</span><span class="tag cat">' + esc(r.category) + '</span></div>' +
+      (c ? '<div class="t3">✎ ' + esc(c) + '</div>' : '') +
+    '</div>' +
+    '<span class="pill" style="background:' + statusColor(r.conclusion, colors) + '">' + esc(r.conclusion) + '</span>' +
+    '<span class="chev">›</span>' +
+  '</div>';
+}
+
+function renderList() {
+  if (!state.data) return;
+  const rows = filtered();
 
   if (!rows.length) {
     $('listWrap').innerHTML = '<div class="empty">没有匹配的记录</div>';
+    if (io) { io.disconnect(); io = null; }
     return;
   }
 
-  const colors = (state.data.display && state.data.display.status_color) || {};
-  const CAP = 500;
-  const shown = rows.slice(0, CAP);
-
-  const items = shown.map((r) => {
-    const k = keyOf(r);
-    const c = cmts[k];
-    return '<div class="row" data-code="' + esc(r.code) + '" data-cat="' + esc(r.category) + '">' +
-      '<div class="main">' +
-        '<div class="t1">' + esc(r.name) + (favs.has(k) ? '<span class="star">★</span>' : '') + '</div>' +
-        '<div class="t2"><span class="tag">' + esc(r.code) + '</span><span class="tag cat">' + esc(r.category) + '</span></div>' +
-        (c ? '<div class="t3">✎ ' + esc(c) + '</div>' : '') +
-      '</div>' +
-      '<span class="pill" style="background:' + (colors[r.conclusion] || 'var(--gray)') + '">' + esc(r.conclusion) + '</span>' +
-      '<span class="chev">›</span>' +
-    '</div>';
-  }).join('');
+  const shown = rows.slice(0, state.shown);
+  const rest = rows.length - state.shown;
+  const more = rest > 0
+    ? '<button class="more" id="loadMore">加载更多（还有 ' + rest + ' 条）</button>'
+    : '';
 
   $('listWrap').innerHTML =
-    '<div class="group-hd"><span>共 ' + rows.length + ' 条' + (rows.length > CAP ? '（显示前 ' + CAP + '）' : '') + '</span></div>' +
-    '<div class="group">' + items + '</div>' +
-    (rows.length > CAP ? '<div class="empty" style="padding:16px">请用搜索或筛选缩小范围</div>' : '');
+    '<div class="group-hd"><span>共 ' + rows.length + ' 条</span><span>' + (state.onlyFav ? '只看收藏' : '') + '</span></div>' +
+    '<div class="group">' + shown.map(rowHtml).join('') + '</div>' +
+    more;
+
+  const btn = $('loadMore');
+  if (btn) btn.onclick = () => { state.shown += PAGE; renderList(); };
+  observeSentinel();
 }
 
-/* ★ 2026-09-20 新增：只更新一行，不重建整个列表。
-   以前收藏/点评都会调 renderList()，把最多 500 行 DOM 全部重建 ——
-   既卡顿，又把列表滚动位置清掉（从详情返回就回到顶部）。 */
+function observeSentinel() {
+  const el = $('loadMore');
+  if (io) { io.disconnect(); io = null; }
+  if (!el || typeof IntersectionObserver === 'undefined') return;
+  io = new IntersectionObserver((ents) => {
+    if (!ents.some((x) => x.isIntersecting)) return;
+    if (io) { io.disconnect(); io = null; }
+    if (!state.data) return;
+    if (state.shown >= filtered().length) return;
+    state.shown += PAGE;
+    renderList();
+  }, { rootMargin: '400px 0px' });
+  io.observe(el);
+}
+
+/* ★ 只更新一行，不重建整个列表 —— 以前收藏/点评都调 renderList()，
+   重建最多 500 行 DOM，既卡顿又把滚动位置清掉（从详情返回就回到顶部）。 */
 function findRowEl(k) {
   const rows = document.querySelectorAll('#listWrap .row');
   for (let i = 0; i < rows.length; i++) {
@@ -542,24 +728,114 @@ function updateRowCmt(k) {
 }
 
 /* ==================================================================
+   页面层级 / 返回键
+   ★ 安卓系统返回键原本直接退出 App —— 因为 SPA 从不产生历史记录，
+     WebView 的 canGoBack() 永远是 false。
+     现在每开一层（详情 / 弹层）就 pushState 一条，返回键自然逐层回退。
+   ================================================================== */
+const layer = { depth: 0 };
+
+function pushLayer() {
+  layer.depth++;
+  try { history.pushState({ sjLayer: layer.depth }, ''); } catch (e) {}
+}
+
+function topLayerClose() {
+  if ($('mask').classList.contains('show')) { closeSheet(); return true; }
+  if ($('detail').classList.contains('show')) { closeDetail(); return true; }
+  return false;
+}
+
+/* 程序内关闭一律走 popLayer()：让 popstate 成为唯一的关闭路径，
+   避免「手动关一次 + 历史回退一次」的双重关闭。 */
+function popLayer() {
+  if (layer.depth > 0) { try { history.back(); return; } catch (e) {} }
+  topLayerClose();
+}
+
+window.addEventListener('popstate', () => {
+  if (layer.depth > 0) layer.depth--;
+  topLayerClose();
+});
+
+/* ==================================================================
    详情
    ================================================================== */
 function findRecord(code, cat) {
   return (state.data.records || []).find((r) => r.code === code && r.category === cat);
 }
 
+/* 判断机结果：纵向卡片。原先是横向 table，
+   ★ 表头发 4 个 <th>、数据行只发 3 个 <td> → 列错位；
+   ★ table{min-width:430px} → 手机上必然横向滚动。整表删除。 */
+function judgeHtml(r) {
+  const d = state.data;
+  const t = d.judge_tables && d.judge_tables[r.category];
+  if (!t) return '';
+  const hitColor = (d.display && d.display.hit_color) || {};
+
+  /* 分组从数据里动态取（原来写死 ['有利','不利','中性','待定']，
+     出现第 5 种「性质」时那些行一行都不渲染、且不报错），再按偏好顺序排。 */
+  const PREF = ['有利', '不利', '中性', '待定'];
+  const groups = [];
+  (t.rows || []).forEach((row) => { if (groups.indexOf(row[1]) < 0) groups.push(row[1]); });
+  groups.sort((a, b) => {
+    const ia = PREF.indexOf(a), ib = PREF.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+
+  let body = '';
+  groups.forEach((g) => {
+    const idx = [];
+    (t.rows || []).forEach((row, i) => { if (row[1] === g) idx.push(i); });
+    if (!idx.length) return;
+    body += '<div class="jgrp">' + esc(g) + '条件 · ' + idx.length + ' 条</div>';
+    idx.forEach((i) => {
+      const hit = (r.judge && r.judge[i]) || '不确定';
+      body += '<div class="jrow">' +
+        '<div class="jq">' + esc(t.rows[i][0]) + '</div>' +
+        '<div class="jm">' +
+          '<span class="jhit" style="color:' + (hitColor[hit] || 'var(--text-2)') + '">' + esc(hit) + '</span>' +
+          '<span class="jrole">' + esc(t.rows[i][2] || '') + '</span>' +
+        '</div>' +
+      '</div>';
+    });
+  });
+
+  return '<div class="card"><div class="card-hd"><span>判断机结果</span><span class="sub">' +
+    esc(t.class || '') + ' ' + esc(t.title || '') + '</span></div>' + body + '</div>';
+}
+
+function annHtml(r) {
+  const d = state.data;
+  const anns = (d.announcements && d.announcements[r.code]) || [];
+  if (!anns.length) {
+    return '<div class="card"><div class="card-hd"><span>公告列表</span></div><div class="empty-row">暂无公告</div></div>';
+  }
+  const show = anns.slice(0, state.annShown);
+  return '<div class="card"><div class="card-hd"><span>公告列表</span><span class="sub">共 ' + anns.length + ' 条</span></div>' +
+    show.map((a) =>
+      '<a class="ann" href="' + esc(a.url || '#') + '" target="_blank" rel="noopener">' +
+        '<div class="at"><span class="tx">' + esc(a.title) + '</span><span class="ext">↗</span></div>' +
+        '<div class="am">' + (a.date ? '<span>' + esc(a.date) + '</span>' : '') +
+          (a.column ? '<span>' + esc(a.column) + '</span>' : '') + '</div>' +
+      '</a>').join('') +
+    (anns.length > state.annShown ? '<button class="more" id="annMore">展开全部（共 ' + anns.length + ' 条）</button>' : '') +
+    '</div>';
+}
+
 function openDetail(r) {
-  /* ★ 2026-09-20 修：「展开全部」按钮点了没反应。
-     原因是 openDetail 一进来就把 annShown 重置成 30，
-     而按钮的 onclick 是「先设成 anns.length、再调 openDetail」——
-     设完立刻被改回去。现在同一条记录重入时保留 annShown。 */
+  /* ★ 原 bug：「展开全部」点了没反应 —— openDetail 一进来就把 annShown 重置成
+     ANN_STEP，而按钮是「先设成 anns.length、再调 openDetail」，设完立刻被改回去。
+     现在同一条记录重入时保留 annShown。 */
   const same = !!(state.cur && state.cur.code === r.code && state.cur.category === r.category);
+  const first = !state.cur;
   state.cur = r;
-  if (!same) state.annShown = 30;
+  if (!same) state.annShown = ANN_STEP;
 
   const d = state.data;
   const colors = (d.display && d.display.status_color) || {};
-  const stColor = colors[r.conclusion] || 'var(--gray)';
+  const stColor = statusColor(r.conclusion, colors);
 
   $('dTitle').textContent = r.name;
 
@@ -573,77 +849,22 @@ function openDetail(r) {
       '</div>' +
     '</div>';
 
-  // ---- 判断机结果 ----
-  const t = d.judge_tables[r.category];
-  let judgeHtml = '';
-  if (t) {
-    const cols = t.columns || ['判断问题', '性质', '作用'];
-    const hitColor = (d.display && d.display.hit_color) || {};
-    /* ★ 2026-09-20 修：分组以前写死 ['有利','不利','中性','待定']，
-       判断表里只要出现第 5 种「性质」，那些行会一行都不渲染、且不报错。
-       现在从数据里动态取，再按偏好顺序排。 */
-    const PREF = ['有利', '不利', '中性', '待定'];
-    const groups = [];
-    (t.rows || []).forEach((row) => { if (groups.indexOf(row[1]) < 0) groups.push(row[1]); });
-    groups.sort((a, b) => {
-      const ia = PREF.indexOf(a), ib = PREF.indexOf(b);
-      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
-    });
-    let tbody = '';
-    groups.forEach((g) => {
-      const idx = [];
-      (t.rows || []).forEach((row, i) => { if (row[1] === g) idx.push(i); });
-      if (!idx.length) return;
-      tbody += '<tr class="grp"><td colspan="' + (cols.length + 1) + '">' + esc(g) + '条件 · ' + idx.length + ' 条</td></tr>';
-      idx.forEach((i) => {
-        const hit = (r.judge && r.judge[i]) || '不确定';
-        tbody += '<tr><td>' + esc(t.rows[i][0]) + '</td><td>' + esc(t.rows[i][2]) + '</td>' +
-          '<td class="hit" style="color:' + (hitColor[hit] || 'var(--text-2)') + '">' + esc(hit) + '</td></tr>';
-      });
-    });
-    judgeHtml =
-      '<div class="card"><div class="card-hd"><span>判断机结果</span><span class="sub">' +
-        esc(t.class || '') + ' ' + esc(t.title || '') + '</span></div>' +
-        '<div class="tblwrap"><table><thead><tr>' +
-          cols.map((c) => '<th>' + esc(c) + '</th>').join('') + '<th>结果</th>' +
-        '</tr></thead><tbody>' + tbody + '</tbody></table></div></div>';
-  }
-
-  // ---- 公告列表 ----
-  const anns = (d.announcements && d.announcements[r.code]) || [];
-  let annHtml = '';
-  if (anns.length) {
-    const show = anns.slice(0, state.annShown);
-    annHtml =
-      '<div class="card"><div class="card-hd"><span>公告列表</span><span class="sub">共 ' + anns.length + ' 条</span></div>' +
-      show.map((a) =>
-        '<a class="ann" href="' + esc(a.url || '#') + '" target="_blank" rel="noopener">' +
-          '<div class="at"><span>' + esc(a.title) + '</span><span class="ext">↗</span></div>' +
-          '<div class="am">' + (a.date ? '<span>' + esc(a.date) + '</span>' : '') +
-            (a.column ? '<span>' + esc(a.column) + '</span>' : '') + '</div>' +
-        '</a>').join('') +
-      (anns.length > state.annShown ? '<button class="more" id="annMore">展开全部（共 ' + anns.length + ' 条）</button>' : '') +
-      '</div>';
-  } else {
-    annHtml = '<div class="card"><div class="card-hd"><span>公告列表</span></div><div class="empty-row">暂无公告</div></div>';
-  }
-
-  // ---- 总结 / 点评 ----
   const c = cmts[keyOf(r)];
   $('dBody').innerHTML =
-    judgeHtml +
-    annHtml +
+    judgeHtml(r) +
+    annHtml(r) +
     '<div class="card"><div class="card-hd"><span>AI 总结</span></div><div class="card-pad">' + esc(r.summary || '—') + '</div></div>' +
     '<div class="card"><div class="card-hd"><span>我的点评</span></div><div class="card-pad">' +
       (c ? esc(c) : '<span style="color:var(--text-3)">还没写点评</span>') + '</div></div>';
 
   const more = $('annMore');
-  if (more) more.onclick = () => { state.annShown = anns.length; openDetail(r); };
+  if (more) more.onclick = () => { state.annShown = (d.announcements && d.announcements[r.code] || []).length; openDetail(r); };
 
   $('detail').classList.add('show');
   $('acts').classList.add('show');
   syncActs();
-  $('detail').scrollTop = 0;
+
+  if (first) { pushLayer(); $('detail').scrollTop = 0; }
 }
 
 function closeDetail() {
@@ -662,10 +883,14 @@ function syncActs() {
 
 /* ==================================================================
    弹层
+   ★ 同一时刻只有一个 sheet：换 sheet 只替换内容，不再压历史层，
+     避免「关一个又开一个」时 popstate 把新开的那个一起关掉。
    ================================================================== */
 function openSheet(html) {
+  const shown = $('mask').classList.contains('show');
   $('sheet').innerHTML = '<div class="sheet-grab"></div>' + html;
   $('mask').classList.add('show');
+  if (!shown) pushLayer();
 }
 function closeSheet() { $('mask').classList.remove('show'); }
 
@@ -675,15 +900,17 @@ function menuSheet() {
       '<button class="sheet-item" id="mImport"><span class="ic">↧</span><span class="tx">从本地文件导入 txt</span><span class="chev">›</span></button>' +
       '<button class="sheet-item" id="mSource"><span class="ic">⚙</span><span class="tx">数据源设置</span><span class="chev">›</span></button>' +
       '<button class="sheet-item" id="mExport"><span class="ic">↥</span><span class="tx">导出收藏与点评</span><span class="chev">›</span></button>' +
-      '<button class="sheet-item" id="mRefresh"><span class="ic">↻</span><span class="tx">重新加载数据</span><span class="chev">›</span></button>' +
+      '<button class="sheet-item" id="mRestore"><span class="ic">↧</span><span class="tx">从备份恢复收藏与点评</span><span class="chev">›</span></button>' +
+      '<button class="sheet-item" id="mRefresh"><span class="ic">↻</span><span class="tx">重新加载数据（回到线上）</span><span class="chev">›</span></button>' +
     '</div>' +
     '<div class="sheet-btns"><button id="mCancel">取消</button></div>'
   );
-  $('mCancel').onclick = closeSheet;
-  $('mImport').onclick = () => { closeSheet(); pickFile(); };
-  $('mSource').onclick = sourceSheet;
-  $('mExport').onclick = () => { closeSheet(); exportData(); };
-  $('mRefresh').onclick = () => { closeSheet(); boot(true); };
+  $('mCancel').onclick = popLayer;
+  $('mImport').onclick = () => { popLayer(); pickFile(); };
+  $('mSource').onclick = sourceSheet;               /* 原地替换，不压层 */
+  $('mExport').onclick = () => { popLayer(); exportData(); };
+  $('mRestore').onclick = () => { popLayer(); restoreBackup(); };
+  $('mRefresh').onclick = () => { popLayer(); toast('正在重新加载…'); boot(false, true); };
 }
 
 function sourceSheet() {
@@ -706,17 +933,17 @@ function sourceSheet() {
       '<button id="sSave" class="primary">保存并重新加载</button>' +
     '</div>'
   );
-  $('sCancel').onclick = closeSheet;
+  $('sCancel').onclick = popLayer;
   $('sSave').onclick = () => {
     const u = $('inUrls').value.trim();
     const k = $('inKey').value.trim();
     if (k && !/^[0-9a-fA-F]{64}$/.test(k)) { toast('密钥需为 64 位十六进制'); return; }
     u ? localStorage.setItem(LS.urls, u) : localStorage.removeItem(LS.urls);
     k ? localStorage.setItem(LS.key, k) : localStorage.removeItem(LS.key);
-    closeSheet();
-    localStorage.removeItem(LS.cache);
+    popLayer();
+    Cache.clear();
     toast('已保存，正在重新加载');
-    boot(false);
+    boot(false, true);
   };
 }
 
@@ -727,15 +954,13 @@ function cmtSheet() {
     '<div class="grp"><textarea id="inCmt" placeholder="写下你的判断…">' + esc(cmts[keyOf(state.cur)] || '') + '</textarea></div>' +
     '<div class="sheet-btns"><button id="cCancel">取消</button><button id="cSave" class="primary">保存</button></div>'
   );
-  $('cCancel').onclick = closeSheet;
+  $('cCancel').onclick = popLayer;
   $('cSave').onclick = () => {
     const k = keyOf(state.cur);
     const v = $('inCmt').value.trim();
     if (v) cmts[k] = v; else delete cmts[k];
     saveCmt();
-    closeSheet();
-    /* ★ 2026-09-20 修：原来这里 renderList() 重建整个列表 —— 列表滚动位置会被清掉。
-       改成只更新那一行。 */
+    popLayer();
     if (state.onlyFav) renderList(); else updateRowCmt(k);
     openDetail(state.cur);
     toast('已保存');
@@ -743,7 +968,7 @@ function cmtSheet() {
 }
 
 /* ==================================================================
-   导入 / 导出
+   导入 / 导出 / 恢复
    ================================================================== */
 function pickFile() {
   const el = document.createElement('input');
@@ -756,11 +981,12 @@ function pickFile() {
     fr.onload = async () => {
       try {
         const d = await decryptText(fr.result);
-        localStorage.setItem(LS.cache, JSON.stringify(d));
-        apply(d, false);
-        toast('导入成功');
-      } catch (e) { toast('导入失败：' + e.message, 2600); }
+        try { await Cache.set(d); } catch (e) {}
+        apply(d, 'local');           /* ★ 标成 local：后台刷新不再覆盖它 */
+        toast('导入成功（本地数据）');
+      } catch (e) { toast('导入失败：' + e.message, 2800); }
     };
+    fr.onerror = () => toast('读取文件失败', 2400);
     fr.readAsText(f);
   };
   el.click();
@@ -769,6 +995,8 @@ function pickFile() {
 function exportData() {
   if (!state.data) { toast('还没有数据'); return; }
   const payload = {
+    kind: 'stock-judge-backup',
+    version: 1,
     exported_at: new Date().toISOString(),
     schema: state.data.meta && state.data.meta.schema,
     data_generated_at: state.data.meta && state.data.meta.generated_at,
@@ -785,14 +1013,50 @@ function exportData() {
   toast('已导出');
 }
 
+/* ★ 新增：从备份恢复。合并式 —— 只补不覆盖，
+   已有内容原样保留，冲突条数如实报出。 */
+function restoreBackup() {
+  const el = document.createElement('input');
+  el.type = 'file';
+  el.accept = '.json,application/json';
+  el.onchange = () => {
+    const f = el.files && el.files[0];
+    if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      try {
+        const p = JSON.parse(fr.result);
+        const favArr = Array.isArray(p.favorites) ? p.favorites : [];
+        const cmtObj = (p.comments && typeof p.comments === 'object') ? p.comments : {};
+        let nf = 0, nc = 0, skip = 0;
+        favArr.forEach((k) => { if (typeof k === 'string' && k && !favs.has(k)) { favs.add(k); nf++; } });
+        Object.keys(cmtObj).forEach((k) => {
+          const v = cmtObj[k];
+          if (typeof v !== 'string' || !v) return;
+          if (cmts[k] === undefined) { cmts[k] = v; nc++; }
+          else if (cmts[k] !== v) skip++;
+        });
+        saveFav(); saveCmt();
+        renderList();
+        if (state.cur) openDetail(state.cur);
+        toast('已恢复：收藏 +' + nf + '、点评 +' + nc + (skip ? '（' + skip + ' 条已存在，未覆盖）' : ''), 3000);
+      } catch (e) { toast('恢复失败：' + e.message, 2800); }
+    };
+    fr.onerror = () => toast('读取文件失败', 2400);
+    fr.readAsText(f);
+  };
+  el.click();
+}
+
 /* ==================================================================
    事件绑定
    ================================================================== */
-$('q').addEventListener('input', (e) => { state.query = e.target.value; renderList(); });
+$('q').addEventListener('input', (e) => { state.query = e.target.value; state.shown = PAGE; renderList(); });
 
 $('btnFav').addEventListener('click', () => {
   state.onlyFav = !state.onlyFav;
   $('btnFav').classList.toggle('on', state.onlyFav);
+  state.shown = PAGE;
   renderList();
 });
 
@@ -801,6 +1065,7 @@ $('btnMore').addEventListener('click', menuSheet);
 $('catSegs').addEventListener('click', (e) => {
   const b = e.target.closest('.seg'); if (!b) return;
   state.cat = b.dataset.cat;
+  state.shown = PAGE;
   [...$('catSegs').children].forEach((c) => c.classList.toggle('on', c === b));
   renderList();
 });
@@ -808,6 +1073,7 @@ $('catSegs').addEventListener('click', (e) => {
 $('stSegs').addEventListener('click', (e) => {
   const b = e.target.closest('.seg'); if (!b) return;
   state.concl = b.dataset.st;
+  state.shown = PAGE;
   [...$('stSegs').children].forEach((c) => c.classList.toggle('on', c === b));
   renderList();
 });
@@ -818,7 +1084,7 @@ $('listWrap').addEventListener('click', (e) => {
   if (r) openDetail(r);
 });
 
-$('btnBack').addEventListener('click', closeDetail);
+$('btnBack').addEventListener('click', popLayer);
 
 $('aFav').addEventListener('click', () => {
   if (!state.cur) return;
@@ -826,8 +1092,7 @@ $('aFav').addEventListener('click', () => {
   if (favs.has(k)) { favs.delete(k); toast('已取消收藏'); } else { favs.add(k); toast('已收藏'); }
   saveFav();
   syncActs();
-  /* ★ 2026-09-20 修：原来无条件 renderList()，重建整个列表。
-     只在「只看收藏」模式下需要重建（那一行要消失），否则局部更新即可。 */
+  /* 只在「只看收藏」模式下需要重建（那一行要消失），否则局部更新即可 */
   if (state.onlyFav) renderList(); else updateRowStar(k);
 });
 
@@ -853,27 +1118,24 @@ function fallbackCopy(t, done) {
   ta.remove();
 }
 
-$('mask').addEventListener('click', (e) => { if (e.target === $('mask')) closeSheet(); });
+$('mask').addEventListener('click', (e) => { if (e.target === $('mask')) popLayer(); });
 
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { if ($('mask').classList.contains('show')) closeSheet(); else closeDetail(); }
-});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') popLayer(); });
 
-/* 支持从系统「用其他应用打开」传入（Capacitor intent / 自定义 scheme） */
-/* ★ 2026-09-20 修：原写法 try/catch 包不住 async —— decryptText 返回 Promise，
-   .then 里的 rejection 不会被外层 catch 捕获，用户看不到任何错误（未处理的 rejection）。
-   现在补 .catch。 */
+/* 支持从系统「用其他应用打开」传入（Capacitor intent / 自定义 scheme）
+   ★ 原写法 try/catch 包不住 async —— decryptText 返回 Promise，.then 里的
+   rejection 不会被外层 catch 捕获，用户看不到任何错误。现在补 .catch。 */
 window.addEventListener('sjOpenFile', (e) => {
   try {
     decryptText(e.detail.text)
-      .then((d) => {
-        localStorage.setItem(LS.cache, JSON.stringify(d));
-        apply(d, false);
+      .then(async (d) => {
+        try { await Cache.set(d); } catch (err) {}
+        apply(d, 'local');
         toast('已打开导入的文件');
       })
-      .catch((err) => toast('打开失败：' + err.message, 2600));
+      .catch((err) => toast('打开失败：' + err.message, 2800));
   } catch (err) {
-    toast('打开失败：' + err.message, 2600);
+    toast('打开失败：' + err.message, 2800);
   }
 });
 
@@ -882,8 +1144,8 @@ window.addEventListener('sjOpenFile', (e) => {
    仅 Android 原生场景会命中；浏览器里该变量永远是 undefined，无副作用。
 
    ★ 必须在启动时就挂上。原先这段被误粘进 sourceSheet 的「保存并重新加载」
-     回调里，导致 App 冷启动后用系统「用其他应用打开 txt」不生效
-     （要先进设置点一次保存才会开始轮询）。2026-09-20 移回顶层。
+     回调里，导致 App 冷启动后用系统「用其他应用打开 txt」不生效。
+   ★ 轮询上限 60 → POLL_MAX（120 秒），避免冷启动慢时静默漏接。
    ================================================================== */
 (function () {
   let tries = 0;
@@ -900,15 +1162,15 @@ window.addEventListener('sjOpenFile', (e) => {
         const res = await fetch(url);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const d = await decryptText(await res.text());
-        localStorage.setItem(LS.cache, JSON.stringify(d));
-        apply(d, false);
+        try { await Cache.set(d); } catch (e) {}
+        apply(d, 'local');
         toast('已打开外部文件');
       } catch (e) {
-        toast('打开失败：' + e.message, 2600);
+        toast('打开失败：' + e.message, 2800);
       }
       return;
     }
-    if (++tries > 60) clearInterval(timer);
+    if (++tries > POLL_MAX) clearInterval(timer);
   }, 500);
 })();
 
