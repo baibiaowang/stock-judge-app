@@ -8,6 +8,8 @@ import android.os.Looper;
 import android.webkit.ValueCallback;
 import android.webkit.WebView;
 
+import androidx.activity.OnBackPressedCallback;
+
 import com.getcapacitor.BridgeActivity;
 
 import java.io.ByteArrayOutputStream;
@@ -28,8 +30,8 @@ import java.io.InputStream;
 public class MainActivity extends BridgeActivity {
 
     private static final String INCOMING_FILE = "incoming.txt";
-    /** 前端轮询上限是 60 * 500ms = 30s，这里保持同一量级 */
-    private static final int MAX_ATTEMPTS = 60;
+    /** 与前端 POLL_MAX 保持一致：240 * 500ms = 120s */
+    private static final int MAX_ATTEMPTS = 240;
     private static final long RETRY_MS = 500L;
     /** 与前端 decryptBytes() 的 `u8.length < 33` 保持一致 */
     private static final int MIN_BYTES = 33;
@@ -37,7 +39,42 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        installBackHandler();
         handle(getIntent());
+    }
+
+    /**
+     * ★ 2026-09-20 新增：把系统返回键接进页面层级。
+     *
+     * 为什么必须在这一层做（不是前端没写，是前端根本收不到）：
+     *   Capacitor 核心的 BridgeActivity **没有覆写 onBackPressed()** ——
+     *   读过官方源码，整个类里没有这个方法；项目也没有装 @capacitor/app。
+     *   所以系统返回键根本走不到 WebView，直接落到 Activity 默认的 finish()，
+     *   表现为「按一下返回就退到桌面」。
+     *   前端那套 history.pushState / popstate 层级因此一次都没被触发过
+     *   （浏览器里点返回键 = 浏览历史后退，所以浏览器测能过，真机不能）。
+     *
+     * 逻辑：
+     *   WebView 还有历史（详情页 / 弹层开着）→ goBack()，由前端 popstate 逐层关闭；
+     *   历史空了 → 关掉自己再交回系统，这时才是真正退出 App。
+     *
+     * 用 OnBackPressedCallback 而不是覆写已废弃的 onBackPressed()，
+     * 这样 Android 13+ 的预测性返回（predictive back）也走得通。
+     */
+    private void installBackHandler() {
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                WebView wv = (getBridge() == null) ? null : getBridge().getWebView();
+                if (wv != null && wv.canGoBack()) {
+                    wv.goBack();
+                    return;
+                }
+                setEnabled(false);
+                getOnBackPressedDispatcher().onBackPressed();
+                setEnabled(true);
+            }
+        });
     }
 
     @Override
