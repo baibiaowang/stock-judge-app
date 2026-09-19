@@ -641,38 +641,7 @@ function sourceSheet() {
     closeSheet();
     localStorage.removeItem(LS.cache);
     toast('已保存，正在重新加载');
-    /* ==================================================================
-   外部打开：轮询 MainActivity 注入的文件路径（files/incoming.txt）
-   仅 Android 原生场景会命中；浏览器里该变量永远是 undefined，无副作用。
-   ================================================================== */
-(function () {
-  let tries = 0;
-  const timer = setInterval(async () => {
-    const p = window.__SJ_INCOMING_PATH__;
-    if (p) {
-      window.__SJ_INCOMING_PATH__ = null;
-      clearInterval(timer);
-      try {
-        let url = p;
-        if (window.Capacitor && typeof window.Capacitor.convertFileSrc === 'function') {
-          url = window.Capacitor.convertFileSrc(p);
-        }
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const d = await decryptText(await res.text());
-        localStorage.setItem(LS.cache, JSON.stringify(d));
-        apply(d, false);
-        toast('已打开外部文件');
-      } catch (e) {
-        toast('打开失败：' + e.message, 2600);
-      }
-      return;
-    }
-    if (++tries > 60) clearInterval(timer);
-  }, 500);
-})();
-
-boot(false);
+    boot(false);
   };
 }
 
@@ -814,6 +783,41 @@ window.addEventListener('sjOpenFile', (e) => {
   try { decryptText(e.detail.text).then((d) => { localStorage.setItem(LS.cache, JSON.stringify(d)); apply(d, false); toast('已打开导入的文件'); }); }
   catch (err) { toast('打开失败：' + err.message); }
 });
+
+/* ==================================================================
+   外部打开：轮询 MainActivity 注入的文件路径（files/incoming.txt）
+   仅 Android 原生场景会命中；浏览器里该变量永远是 undefined，无副作用。
+
+   ★ 必须在启动时就挂上。原先这段被误粘进 sourceSheet 的「保存并重新加载」
+     回调里，导致 App 冷启动后用系统「用其他应用打开 txt」不生效
+     （要先进设置点一次保存才会开始轮询）。2026-09-20 移回顶层。
+   ================================================================== */
+(function () {
+  let tries = 0;
+  const timer = setInterval(async () => {
+    const p = window.__SJ_INCOMING_PATH__;
+    if (p) {
+      window.__SJ_INCOMING_PATH__ = null;
+      clearInterval(timer);
+      try {
+        let url = p;
+        if (window.Capacitor && typeof window.Capacitor.convertFileSrc === 'function') {
+          url = window.Capacitor.convertFileSrc(p);
+        }
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const d = await decryptText(await res.text());
+        localStorage.setItem(LS.cache, JSON.stringify(d));
+        apply(d, false);
+        toast('已打开外部文件');
+      } catch (e) {
+        toast('打开失败：' + e.message, 2600);
+      }
+      return;
+    }
+    if (++tries > 60) clearInterval(timer);
+  }, 500);
+})();
 
 boot(false);
 </script>
