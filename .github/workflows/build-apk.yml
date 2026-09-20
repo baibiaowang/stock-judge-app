@@ -12,7 +12,17 @@ on:
       - '.github/workflows/build-apk.yml'
 
 permissions:
-  contents: read
+  contents: write
+
+env:
+  # ★ 固定签名：密钥来自仓库 Secrets（不是 runner 临时生成的 debug.keystore）。
+  #   versionCode 必须单调递增，否则覆盖安装报 INSTALL_FAILED_VERSION_DOWNGRADE。
+  #   github.run_number 对该 workflow 单调递增，加 1000 避免与早期版本撞号。
+  ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+  ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+  ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+  APP_VERSION_CODE: ${{ 1000 + github.run_number }}
+  APP_VERSION_NAME: 2026.09.20.${{ github.run_number }}
 
 jobs:
   build:
@@ -20,8 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Capacitor CLI (8.x) 要求 Node >= 22，用 20 会在 `npx cap add android` 报
-      # [fatal] The Capacitor CLI requires NodeJS >=22.0.0
+      # Capacitor CLI (8.x) 要求 Node >= 22
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -32,21 +41,13 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # NOTE: 不要用 android-actions/setup-android@v3。
-      # 它会执行 `sdkmanager tools`，而 `tools` 包已被 Google 从 SDK 仓库移除，
-      # 必然报 `Failed to find package 'tools'` + exit 1，把后面所有步骤一起 skip。
-      # ubuntu-latest runner 已预装 Android SDK（/usr/local/lib/android/sdk），直接用它。
+      # NOTE: 不要用 android-actions/setup-android@v3（它会跑 sdkmanager tools，
+      # 而 tools 包已被移除，必然失败并 skip 后续步骤）。runner 预装 SDK，直接用。
       - name: Android SDK diagnostics
         run: |
-          echo "ANDROID_HOME=${ANDROID_HOME:-<unset>}"
-          echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-<unset>}"
           SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
           echo "SDK=$SDK"
           ls "$SDK" || true
-          echo "--- platforms ---"
-          ls "$SDK/platforms" 2>/dev/null || true
-          echo "--- build-tools ---"
-          ls "$SDK/build-tools" 2>/dev/null || true
           echo "node=$(node -v)  java=$(java -version 2>&1 | head -1)"
 
       - name: Ensure Android SDK packages
@@ -57,18 +58,12 @@ jobs:
             echo "::error::sdkmanager not found under $SDK"
             exit 1
           fi
-          echo "sdkmanager=$SM"
           yes | "$SM" --licenses >/dev/null 2>&1 || true
           for p in "platform-tools" "platforms;android-35" "build-tools;35.0.0" "platforms;android-36" "build-tools;36.0.0"; do
-            if "$SM" "$p" >/dev/null 2>&1; then
-              echo "ok: $p"
-            else
-              echo "::warning::sdkmanager could not install $p (gradle will try to auto-download)"
-            fi
+            if "$SM" "$p" >/dev/null 2>&1; then echo "ok: $p"; else echo "::warning::could not install $p"; fi
           done
 
-      # ★ 放在装依赖之前：inject.mjs 只用 Node 内置模块，早跑能早点暴露密钥问题。
-      # 它读 www/（源文件，含占位符），把注入后的产物写到 dist/www/，源文件不动。
+      # ★ 早跑，早点暴露密钥问题。inject.mjs 读 www/（含占位符），产物写 dist/www/，源文件不动。
       - name: Inject secrets into web assets
         env:
           AES_KEY: ${{ secrets.AES_KEY }}
@@ -82,9 +77,7 @@ jobs:
           key: npm-${{ runner.os }}-${{ hashFiles('package.json') }}
           restore-keys: npm-${{ runner.os }}-
 
-      # ★ 2026-09-20：原来这里写的是 @capacitor/*@latest，每次都装最新版 ——
-      # 上游升大版本时会突然要求更高的 Node/JDK，构建直接炸（已经炸过一次）。
-      # 现在版本锁在 package.json 里，这里只按它装。
+      # 版本锁在 package.json 里，这里按它装，避免上游升大版本炸构建
       - name: Install dependencies
         run: |
           npm install --no-audit --no-fund
@@ -99,6 +92,69 @@ jobs:
           cp native/MainActivity.java android/app/src/main/java/com/baibiaowang/stockjudge/MainActivity.java
           node native/patch-manifest.mjs
 
+      # ★ 固定签名第一步：把 keystore 从 Secret 恢复到工作区（放在仓库根，不依赖 android/ 是否已生成）
+      - name: Prepare fixed signing material
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          MISSING=""
+          [ -z "${ANDROID_KEYSTORE_BASE64:-}" ] && MISSING="$MISSING ANDROID_KEYSTORE_BASE64"
+          [ -z "${ANDROID_KEYSTORE_PASSWORD:-}" ] && MISSING="$MISSING ANDROID_KEYSTORE_PASSWORD"
+          [ -z "${ANDROID_KEY_ALIAS:-}" ] && MISSING="$MISSING ANDROID_KEY_ALIAS"
+          [ -z "${ANDROID_KEY_PASSWORD:-}" ] && MISSING="$MISSING ANDROID_KEY_PASSWORD"
+          if [ -n "$MISSING" ]; then
+            echo "::error::Missing Android signing secrets:$MISSING"
+            exit 1
+          fi
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > signing.p12
+          echo "SIGNING_KEYSTORE_PATH=$(pwd)/signing.p12" >> "$GITHUB_ENV"
+          echo "[signing] keystore restored ($(wc -c < signing.p12) bytes)"
+
+      # ★ 固定签名第二步：把 signingConfigs.release 注入 cap add 生成的 build.gradle
+      #   （android/ 每次重建，所以必须在生成之后注入，不能改仓库里的源文件）
+      - name: Configure fixed release signing
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const p = 'android/app/build.gradle';
+          if (!fs.existsSync(p)) { console.error('::error::android/app/build.gradle not found'); process.exit(1); }
+          let s = fs.readFileSync(p, 'utf8');
+          if (!/android\s*\{/.test(s) || !/buildTypes\s*\{/.test(s)) {
+            console.error('::error::Unexpected Android Gradle file layout.'); process.exit(1);
+          }
+          if (!/signingConfigs\s*\{/.test(s)) {
+            s = s.replace(/buildTypes\s*\{/, `signingConfigs {
+              release {
+                  storeFile file(System.getenv('SIGNING_KEYSTORE_PATH'))
+                  storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                  keyAlias System.getenv('ANDROID_KEY_ALIAS')
+                  keyPassword System.getenv('ANDROID_KEY_PASSWORD')
+              }
+          }
+
+          buildTypes {`);
+          }
+          const releaseBlock = /buildTypes\s*\{\s*release\s*\{/;
+          if (!releaseBlock.test(s)) { console.error('::error::release buildType not found.'); process.exit(1); }
+          if (!/buildTypes\s*\{\s*release\s*\{[^}]*signingConfig\s+signingConfigs\.release/s.test(s)) {
+            s = s.replace(releaseBlock, `buildTypes {
+              release {
+                  signingConfig signingConfigs.release`);
+          }
+          fs.writeFileSync(p, s);
+          console.log('[signing] fixed release signing configured.');
+          NODE
+
+      # ★ 版本号必须每次递增，否则旧机覆盖安装会被拒
+      - name: Stamp version
+        run: |
+          set -euo pipefail
+          G='android/app/build.gradle'
+          sed -i "s/versionCode[[:space:]]*[0-9]*/versionCode ${APP_VERSION_CODE}/" "$G"
+          sed -i "s/versionName[[:space:]]*[\"'][^\"']*[\"']/versionName \"${APP_VERSION_NAME}\"/" "$G"
+          grep -nE "versionCode|versionName" "$G"
+
       - name: Sync web assets
         run: npx cap sync android
 
@@ -112,18 +168,45 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      - name: Build debug APK
+      - name: Build fixed-signed release APK
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon
 
-      - name: Upload APK
+      # ★ 当场验收：签名不对就在这里炸，别等装机才知道
+      - name: Verify APK signature
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/release/app-release.apk"
+          test -f "$APK"
+          BT=$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/*/ 2>/dev/null | sort -V | tail -1)
+          APKSIGNER="${BT}apksigner"
+          "$APKSIGNER" verify --print-certs "$APK" | head -12
+          mkdir -p dist
+          cp "$APK" dist/app.apk
+          echo "Built v${APP_VERSION_NAME} (code ${APP_VERSION_CODE}) with fixed signing."
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: stock-judge-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: stock-judge-apk-v${{ github.run_number }}
+          path: dist/app.apk
           if-no-files-found: error
           retention-days: 30
 
-# Build trigger: keep APK build available on every relevant source update.
+      # ★ 自动发布 Release：App 内「检查更新」读的就是它
+      - name: Publish release with APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.APP_VERSION_NAME }}
+          name: 股票判断机 v${{ env.APP_VERSION_NAME }}
+          body: |
+            自动构建（run #${{ github.run_number }}）。
+            - versionName: v${{ env.APP_VERSION_NAME }}
+            - versionCode: ${{ env.APP_VERSION_CODE }}
+            - 签名：固定正式签名密钥（每次一致，可直接覆盖安装）
+          prerelease: false
+          make_latest: true
+          overwrite_files: true
+          files: dist/app.apk
