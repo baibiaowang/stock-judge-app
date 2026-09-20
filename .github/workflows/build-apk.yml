@@ -16,19 +16,27 @@ permissions:
 
 env:
   # ★ 固定签名：密钥来自仓库 Secrets（不是 runner 临时生成的 debug.keystore）。
-  #   versionCode 必须单调递增，否则覆盖安装报 INSTALL_FAILED_VERSION_DOWNGRADE。
-  #   github.run_number 对该 workflow 单调递增，加 1000 避免与早期版本撞号。
+  #   versionCode 在 Compute version 步骤里算 —— GitHub 表达式不支持算术运算符，
+  #   写 ${{ 1000 + github.run_number }} 会让整个 workflow 编译失败（0 个 job）。
   ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
   ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
   ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-  APP_VERSION_CODE: ${{ 1000 + github.run_number }}
-  APP_VERSION_NAME: 2026.09.20.${{ github.run_number }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # versionCode 必须单调递增，否则覆盖安装报 INSTALL_FAILED_VERSION_DOWNGRADE
+      - name: Compute version
+        run: |
+          set -euo pipefail
+          CODE=$((1000 + ${{ github.run_number }}))
+          NAME="2026.09.20.${{ github.run_number }}"
+          echo "APP_VERSION_CODE=$CODE" >> "$GITHUB_ENV"
+          echo "APP_VERSION_NAME=$NAME" >> "$GITHUB_ENV"
+          echo "version -> code=$CODE name=$NAME"
 
       # Capacitor CLI (8.x) 要求 Node >= 22
       - uses: actions/setup-node@v4
@@ -92,7 +100,7 @@ jobs:
           cp native/MainActivity.java android/app/src/main/java/com/baibiaowang/stockjudge/MainActivity.java
           node native/patch-manifest.mjs
 
-      # ★ 固定签名第一步：把 keystore 从 Secret 恢复到工作区（放在仓库根，不依赖 android/ 是否已生成）
+      # ★ 固定签名第一步：把 keystore 从 Secret 恢复到工作区（放仓库根，不依赖 android/ 是否已生成）
       - name: Prepare fixed signing material
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -181,8 +189,7 @@ jobs:
           APK="android/app/build/outputs/apk/release/app-release.apk"
           test -f "$APK"
           BT=$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/*/ 2>/dev/null | sort -V | tail -1)
-          APKSIGNER="${BT}apksigner"
-          "$APKSIGNER" verify --print-certs "$APK" | head -12
+          "${BT}apksigner" verify --print-certs "$APK" | head -12
           mkdir -p dist
           cp "$APK" dist/app.apk
           echo "Built v${APP_VERSION_NAME} (code ${APP_VERSION_CODE}) with fixed signing."
