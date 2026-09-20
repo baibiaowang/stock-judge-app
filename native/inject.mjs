@@ -2,14 +2,16 @@
  * 构建时把 www/ 里的占位符替换成真实值，产物写到 dist/www/。
  *
  * 用法（在仓库根目录执行）：
- *   AES_KEY=<64位hex> [DATA_URL=<地址,多个用换行分隔>] node native/inject.mjs
+ *   AES_KEY=<64位hex> [DATA_URL=<地址,多个用换行分隔>] [APP_VERSION=<版本名>] node native/inject.mjs
  *
- * - AES_KEY  必填，64 位十六进制；不合法直接失败（避免构建出解不开的 apk）
- * - DATA_URL 可选，留空则用内置默认地址列表（jsdelivr + raw）
+ * - AES_KEY     必填，64 位十六进制；不合法直接失败（避免构建出解不开的 apk）
+ * - DATA_URL    可选，留空则用内置默认地址列表（jsdelivr + raw）
+ * - APP_VERSION 可选，写进 App 的「检查更新」版本号；CI 里必须与 Release tag 同源
+ *   （同一个 run_number 算出来的 versionName），否则 App 会一直误报「发现新版本」。
  *
- * ★ 两个占位符都位于 JS 单引号字符串字面量内（见 www/index.html 顶部
- *   `const DEF_KEY = '__AES_KEY__'` / `const DEF_URLS = '__DATA_URL__'`），
- *   所以替换前必须做 JS 字符串转义。
+ * ★ 三个占位符都位于 JS 单引号字符串字面量内（见 www/index.html 顶部
+ *   `const DEF_KEY = '__AES_KEY__'` / `const DEF_URLS = '__DATA_URL__'` /
+ *   `const APP_VERSION = '__APP_VERSION__'`），所以替换前必须做 JS 字符串转义。
  *
  * ★ 历史事故一（2026-09-20）：多行地址未转义就替换，字面量里出现裸换行 ->
  *   整个 <script> 报 SyntaxError 解析失败 -> App 打开后页面只剩静态骨架、
@@ -51,6 +53,9 @@ if (!/^[0-9a-fA-F]{64}$/.test(key)) {
 
 const urls = (process.env.DATA_URL || '').trim() || DEFAULT_URLS;
 
+/* 版本号：CI 必传；本地手工构建拿不到就退回 0.0.0（不影响其他功能） */
+const appVersion = (process.env.APP_VERSION || '').trim() || '0.0.0';
+
 if (!fs.existsSync(path.join(SRC, ENTRY))) {
   console.error('::error::not found: ' + path.join(SRC, ENTRY));
   process.exit(1);
@@ -84,8 +89,9 @@ const P = path.join(OUT, ENTRY);
 let h = fs.readFileSync(P, 'utf8');
 h = h.split('__AES_KEY__').join(jsSingleQuote(key));
 h = h.split('__DATA_URL__').join(jsSingleQuote(urls));
+h = h.split('__APP_VERSION__').join(jsSingleQuote(appVersion));
 
-if (h.indexOf('__AES_KEY__') >= 0 || h.indexOf('__DATA_URL__') >= 0) {
+if (h.indexOf('__AES_KEY__') >= 0 || h.indexOf('__DATA_URL__') >= 0 || h.indexOf('__APP_VERSION__') >= 0) {
   console.error('::error::placeholder still present after injection');
   process.exit(1);
 }
@@ -111,6 +117,7 @@ fs.writeFileSync(P, h);
 console.log(
   '[inject] ok  key_len=' + key.length +
   '  urls=' + urls.split('\n').length +
+  '  version=' + appVersion +
   '  scripts=' + blocks.length + ' parsed' +
   '  -> ' + P + '  (source untouched)'
 );

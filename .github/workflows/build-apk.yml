@@ -76,6 +76,7 @@ jobs:
         env:
           AES_KEY: ${{ secrets.AES_KEY }}
           DATA_URL: ${{ secrets.DATA_URL }}
+          APP_VERSION: ${{ env.APP_VERSION_NAME }}
         run: node native/inject.mjs
 
       - name: Cache npm
