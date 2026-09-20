@@ -109,7 +109,7 @@ a{color:inherit;text-decoration:none}
 /* ==================================================================
    列表
    ================================================================== */
-.wrap{padding:0 16px calc(120px + env(safe-area-inset-bottom))}
+.wrap{padding:0 16px calc(96px + env(safe-area-inset-bottom))}
 .big{padding:18px 2px 8px}
 .big h1{margin:0;font-size:30px;line-height:1.15;font-weight:800;letter-spacing:-.7px;color:var(--brand)}
 .big-sub{margin-top:5px;font-size:13px;color:var(--text-2)}
@@ -276,31 +276,111 @@ a{color:inherit;text-decoration:none}
   border-radius:50%;animation:sp .8s linear infinite;margin:0 auto 14px;
 }
 @keyframes sp{to{transform:rotate(360deg)}}
+
+/* ==================================================================
+   2026-09-20 新增：底部菜单 / 整页容器 / 折叠 / 公司概况 / 手动标记
+   ================================================================== */
+.big{padding:10px 2px 6px}
+.big-mini{font-size:12.5px;color:var(--text-2)}
+.manual{font-size:10px;font-weight:700;color:#fff;background:var(--brand);border-radius:5px;padding:1px 5px;margin-left:5px}
+
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:80;
+  background:var(--nav-bg);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
+  border-top:.5px solid var(--sep-op);
+  display:flex;padding:6px 0 calc(6px + env(safe-area-inset-bottom));
+  transform:translateY(0);transition:transform .25s cubic-bezier(.32,.72,0,1);
+}
+.tabbar.hide{transform:translateY(130%)}
+.tabbar button{
+  flex:1;min-width:0;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:4px 0;font-size:11px;color:var(--text-2);
+}
+.tabbar button .ti{font-size:18px;line-height:1.1}
+.tabbar button.on{color:var(--brand);font-weight:700}
+.tabbar button:active{opacity:.6}
+
+.page{display:none;padding:8px 16px calc(96px + env(safe-area-inset-bottom))}
+.page.show{display:block}
+.set-sec{font-size:12px;font-weight:700;color:var(--text-2);padding:12px 4px 6px}
+.fold{background:var(--bg-group);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:14px}
+.fold-hd{
+  display:flex;align-items:center;gap:10px;padding:13px 16px;font-size:15.5px;font-weight:600;
+  width:100%;border:0;background:transparent;text-align:left;color:inherit;
+}
+.fold-hd:active{background:var(--fill-3)}
+.fold-hd .fn{flex:1;min-width:0}
+.fold-hd .fc{font-size:13px;font-weight:500;color:var(--text-2)}
+.fold-hd .fx{color:var(--text-3);font-size:13px}
+.fold-bd{border-top:.5px solid var(--sep-op);padding:6px 8px 10px}
+
+.set-item{
+  display:flex;align-items:center;gap:12px;padding:14px 16px;font-size:16px;
+  border-bottom:.5px solid var(--sep-op);width:100%;background:transparent;
+  border-left:0;border-right:0;border-top:0;text-align:left;color:inherit;
+}
+.set-item:last-child{border-bottom:0}
+.set-item:active{background:var(--fill-3)}
+.set-item .ic{width:22px;text-align:center;color:var(--brand);flex:0 0 auto}
+.set-item .tx{flex:1;min-width:0}
+.set-item .vv{font-size:12.5px;color:var(--text-2);flex:0 0 auto}
+.set-item .chev{color:var(--text-3);font-size:15px;flex:0 0 auto}
+
+.editable{cursor:pointer}
+.editable::after{content:' \270F';font-size:10px;margin-left:4px;opacity:.7}
+.jnat{border:0;background:var(--brand-soft);color:var(--brand);font-size:12px;font-weight:600;
+  border-radius:6px;padding:2px 8px;flex:0 0 auto}
+.jnat:active{opacity:.6}
+.anty{font-size:11px;padding:1.5px 7px;border-radius:6px;background:var(--brand-soft);color:var(--brand);font-weight:600}
+
+.prof{position:fixed;inset:0;z-index:100;background:var(--bg);display:none;flex-direction:column}
+.prof.show{display:flex}
+.prof-bar{
+  background:var(--grad);padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top));
+  display:flex;align-items:center;gap:8px;min-height:48px;
+}
+.prof-bar .back{border:0;background:none;color:var(--on-brand);font-size:17px;flex:0 0 auto}
+.prof-bar .tt{flex:1;min-width:0;color:var(--on-brand);font-weight:700;font-size:16px;text-align:center;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prof-bar .btn{border:0;background:var(--fill-on-brand-2);color:var(--on-brand);border-radius:9px;
+  padding:6px 10px;font-size:13px;flex:0 0 auto}
+.prof-tip{padding:8px 14px;font-size:12px;color:var(--text-2);background:var(--bg-elev)}
+.prof-view{flex:1;overflow:auto;background:var(--bg)}
+.prof-stage{transform-origin:top left}
+.prof-stage iframe{border:0;display:block;width:100%;height:100%}
 </style>
 </head>
 <body>
 
-<!-- 顶栏 -->
+<!-- 顶栏（★ / ⋯ 与两行筛选已移到底部菜单） -->
 <div class="nav">
   <div class="nav-row">
-    <div class="nav-title" id="navTitle">股票判断机</div>
-    <button class="nav-btn" id="btnFav" title="只看收藏">★</button>
-    <button class="nav-btn" id="btnMore" title="更多">⋯</button>
+    <div class="nav-title" id="navTitle">股票</div>
   </div>
-  <div class="search"><input id="q" type="search" placeholder="搜索名称 / 代码" autocomplete="off"></div>
-  <div class="segs-wrap"><div class="segs" id="catSegs"></div></div>
-  <div class="segs-wrap"><div class="segs" id="stSegs"></div></div>
+  <div class="search" id="searchBox"><input id="q" type="search" placeholder="搜索名称 / 代码" autocomplete="off"></div>
 </div>
 
-<!-- 列表 -->
-<div class="wrap">
-  <div class="big">
-    <h1 id="bigTitle">股票判断机</h1>
-    <div class="big-sub" id="bigSub">正在加载…</div>
-  </div>
+<!-- 首页：只展示股票 -->
+<div class="wrap" id="viewList">
+  <div class="big"><div class="big-mini" id="bigSub">正在加载…</div></div>
   <div id="listWrap">
     <div class="empty"><div class="spin"></div>正在加载…</div>
   </div>
+</div>
+
+<!-- 底部菜单：整页切换 -->
+<div class="page" id="viewType"></div>
+<div class="page" id="viewConcl"></div>
+<div class="page" id="viewCmt"></div>
+<div class="page" id="viewFav"></div>
+<div class="page" id="viewSet"></div>
+
+<div class="tabbar" id="tabbar">
+  <button data-tab="type"><span class="ti">▤</span><span>类型</span></button>
+  <button data-tab="concl"><span class="ti">◑</span><span>结论</span></button>
+  <button data-tab="cmt"><span class="ti">✎</span><span>点评</span></button>
+  <button data-tab="fav"><span class="ti">★</span><span>收藏</span></button>
+  <button data-tab="set"><span class="ti">⚙</span><span>设置</span></button>
 </div>
 
 <!-- 详情 -->
@@ -321,6 +401,17 @@ a{color:inherit;text-decoration:none}
   <button id="aCopy" class="primary">复制代码</button>
 </div>
 
+<!-- 公司概况（App 内 iframe，同花顺 F10） -->
+<div class="prof" id="prof">
+  <div class="prof-bar">
+    <button class="back" id="btnProfBack">‹ 返回</button>
+    <div class="tt" id="profTitle">公司概况</div>
+    <button class="btn" id="btnProfFit">适应屏宽</button>
+  </div>
+  <div class="prof-tip">这是电脑版页面，已按屏宽缩放；横屏或双指放大看得更清楚。</div>
+  <div class="prof-view" id="profView"><div class="prof-stage" id="profStage"></div></div>
+</div>
+
 <!-- 弹层 -->
 <div class="mask" id="mask"><div class="sheet" id="sheet"></div></div>
 <div class="toast" id="toast"></div>
@@ -334,8 +425,10 @@ const DEF_URLS = '__DATA_URL__';
 
 const LS = {
   fav: 'sj.fav.v3', cmt: 'sj.cmt.v3', cache: 'sj.cache.v3',
-  urls: 'sj.urls.v3', key: 'sj.key.v3',
+  urls: 'sj.urls.v3', key: 'sj.key.v3', ovr: 'sj.ovr.v1',
 };
+const APP_VERSION = '2026.09.20.1';
+const UPDATE_API  = 'https://api.github.com/repos/baibiaowang/stock-judge-app/releases/latest';
 
 const PAGE = 200;          /* 每批渲染条数（触底自动续，不再截断） */
 const ANN_STEP = 30;       /* 公告每次展开条数 */
@@ -350,6 +443,7 @@ const state = {
   data: null, kind: null,
   query: '', cat: '', concl: '', onlyFav: false,
   cur: null, annShown: ANN_STEP, shown: PAGE,
+  tab: 'list', openCat: '', openConcl: '', profCode: '', ovr: {},
 };
 let favs = new Set(), cmts = {};
 
@@ -471,7 +565,9 @@ function getKeyHex() {
 function loadLocal() {
   try { favs = new Set(JSON.parse(localStorage.getItem(LS.fav) || '[]')); } catch (e) { favs = new Set(); }
   try { cmts = JSON.parse(localStorage.getItem(LS.cmt) || '{}'); } catch (e) { cmts = {}; }
+  try { state.ovr = JSON.parse(localStorage.getItem(LS.ovr) || '{}') || {}; } catch (e) { state.ovr = {}; }
 }
+const saveOvr = () => { try { localStorage.setItem(LS.ovr, JSON.stringify(state.ovr)); } catch (e) {} };
 const saveFav = () => { try { localStorage.setItem(LS.fav, JSON.stringify([...favs])); } catch (e) {} };
 const saveCmt = () => { try { localStorage.setItem(LS.cmt, JSON.stringify(cmts)); } catch (e) {} };
 
@@ -569,8 +665,7 @@ function apply(d, kind) {
   state.data = d;
   state.kind = kind || 'remote';
   state.shown = PAGE;
-  buildSegs();
-  renderList();
+  renderCurrent();
 
   const cnt = (d.records || []).length;
   const label = state.kind === 'cache' ? '缓存数据' : state.kind === 'local' ? '本地导入' : '实时数据';
@@ -625,16 +720,18 @@ function buildSegs() {
    ================================================================== */
 let io = null;
 
-function filtered() {
+/* ★ 首页只按搜索过滤：类型 / 结论 / 收藏筛选已移到底部菜单 */
+function matchQ(r) {
   const q = state.query.trim().toLowerCase();
-  return (state.data.records || []).filter((r) => {
-    if (state.cat && r.category !== state.cat) return false;
-    if (state.concl && r.conclusion !== state.concl) return false;
-    if (state.onlyFav && !favs.has(keyOf(r))) return false;
-    if (q && String(r.name || '').toLowerCase().indexOf(q) < 0 && String(r.code || '').indexOf(q) < 0) return false;
-    return true;
-  });
+  if (!q) return true;
+  return String(r.name || '').toLowerCase().indexOf(q) >= 0 || String(r.code || '').indexOf(q) >= 0;
 }
+function allRecs() { return (state.data && state.data.records || []).map(eff).filter(matchQ); }
+function filtered() { return allRecs(); }
+function byCat(c) { return allRecs().filter((r) => effCat(r) === c); }
+function byConcl(c) { return allRecs().filter((r) => effConcl(r) === c); }
+function byFav() { return allRecs().filter((r) => favs.has(keyOf(r))); }
+function byCmt() { return allRecs().filter((r) => cmts[keyOf(r)]); }
 
 function rowHtml(r) {
   const colors = (state.data.display && state.data.display.status_color) || {};
@@ -642,11 +739,11 @@ function rowHtml(r) {
   const c = cmts[k];
   return '<div class="row" data-code="' + esc(r.code) + '" data-cat="' + esc(r.category) + '">' +
     '<div class="main">' +
-      '<div class="t1">' + esc(r.name) + (favs.has(k) ? '<span class="star">★</span>' : '') + '</div>' +
-      '<div class="t2"><span class="tag">' + esc(r.code) + '</span><span class="tag cat">' + esc(r.category) + '</span></div>' +
+      '<div class="t1">' + esc(r.name) + (favs.has(k) ? '<span class="star">★</span>' : '') + (isManual(r) ? '<span class="manual">手</span>' : '') + '</div>' +
+      '<div class="t2"><span class="tag">' + esc(r.code) + '</span><span class="tag cat">' + esc(effCat(r)) + '</span></div>' +
       (c ? '<div class="t3">✎ ' + esc(c) + '</div>' : '') +
     '</div>' +
-    '<span class="pill" style="background:' + statusColor(r.conclusion, colors) + '">' + esc(r.conclusion) + '</span>' +
+    '<span class="pill" style="background:' + statusColor(effConcl(r), colors) + '">' + esc(effConcl(r)) + '</span>' +
     '<span class="chev">›</span>' +
   '</div>';
 }
@@ -741,6 +838,7 @@ function pushLayer() {
 }
 
 function topLayerClose() {
+  if ($('prof').classList.contains('show')) { closeProf(); return true; }
   if ($('mask').classList.contains('show')) { closeSheet(); return true; }
   if ($('detail').classList.contains('show')) { closeDetail(); return true; }
   return false;
@@ -774,20 +872,22 @@ function judgeHtml(r) {
   if (!t) return '';
   const hitColor = (d.display && d.display.hit_color) || {};
 
-  /* 分组从数据里动态取（原来写死 ['有利','不利','中性','待定']，
-     出现第 5 种「性质」时那些行一行都不渲染、且不报错），再按偏好顺序排。 */
-  const PREF = ['有利', '不利', '中性', '待定'];
+  /* ★ 性质改成分组 + 每行可切换：手动改过的行用 effNature 覆盖 */
+  const NAT_PREF = ['有利', '不利', '中性', '待定'];
   const groups = [];
-  (t.rows || []).forEach((row) => { if (groups.indexOf(row[1]) < 0) groups.push(row[1]); });
+  (t.rows || []).forEach((row, i) => {
+    const g = effNature(r, i);
+    if (g && groups.indexOf(g) < 0) groups.push(g);
+  });
   groups.sort((a, b) => {
-    const ia = PREF.indexOf(a), ib = PREF.indexOf(b);
+    const ia = NAT_PREF.indexOf(a), ib = NAT_PREF.indexOf(b);
     return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
   });
 
   let body = '';
   groups.forEach((g) => {
     const idx = [];
-    (t.rows || []).forEach((row, i) => { if (row[1] === g) idx.push(i); });
+    (t.rows || []).forEach((row, i) => { if (effNature(r, i) === g) idx.push(i); });
     if (!idx.length) return;
     body += '<div class="jgrp">' + esc(g) + '条件 · ' + idx.length + ' 条</div>';
     idx.forEach((i) => {
@@ -796,6 +896,7 @@ function judgeHtml(r) {
         '<div class="jq">' + esc(t.rows[i][0]) + '</div>' +
         '<div class="jm">' +
           '<span class="jhit" style="color:' + (hitColor[hit] || 'var(--text-2)') + '">' + esc(hit) + '</span>' +
+          '<button class="jnat" data-ni="' + i + '">' + esc(effNature(r, i) || '—') + ' ✎</button>' +
           '<span class="jrole">' + esc(t.rows[i][2] || '') + '</span>' +
         '</div>' +
       '</div>';
@@ -806,19 +907,30 @@ function judgeHtml(r) {
     esc(t.class || '') + ' ' + esc(t.title || '') + '</span></div>' + body + '</div>';
 }
 
+function annTypes(a) {
+  let raw = a.column != null ? a.column : (a.type != null ? a.type : '');
+  if (Array.isArray(raw)) raw = raw.join(',');
+  return String(raw || '').split(/[,，、;；\/|]/).map((x) => String(x).trim()).filter(Boolean);
+}
+function annSortKey(a) {
+  const s = String(a.date || a.time || '').replace(/[^0-9]/g, '');
+  return s ? Number(s) : 0;
+}
 function annHtml(r) {
   const d = state.data;
-  const anns = (d.announcements && d.announcements[r.code]) || [];
+  const anns = ((d.announcements && d.announcements[r.code]) || []).slice();
   if (!anns.length) {
     return '<div class="card"><div class="card-hd"><span>公告列表</span></div><div class="empty-row">暂无公告</div></div>';
   }
+  /* ★ 按时间倒序：最新的公告在最上面 */
+  anns.sort((x, y) => annSortKey(y) - annSortKey(x));
   const show = anns.slice(0, state.annShown);
-  return '<div class="card"><div class="card-hd"><span>公告列表</span><span class="sub">共 ' + anns.length + ' 条</span></div>' +
+  return '<div class="card"><div class="card-hd"><span>公告列表</span><span class="sub">共 ' + anns.length + ' 条 · 最新在上</span></div>' +
     show.map((a) =>
       '<a class="ann" href="' + esc(a.url || '#') + '" target="_blank" rel="noopener">' +
         '<div class="at"><span class="tx">' + esc(a.title) + '</span><span class="ext">↗</span></div>' +
         '<div class="am">' + (a.date ? '<span>' + esc(a.date) + '</span>' : '') +
-          (a.column ? '<span>' + esc(a.column) + '</span>' : '') + '</div>' +
+          annTypes(a).map((t) => '<span class="anty">' + esc(t) + '</span>').join('') + '</div>' +
       '</a>').join('') +
     (anns.length > state.annShown ? '<button class="more" id="annMore">展开全部（共 ' + anns.length + ' 条）</button>' : '') +
     '</div>';
@@ -835,33 +947,66 @@ function openDetail(r) {
 
   const d = state.data;
   const colors = (d.display && d.display.status_color) || {};
-  const stColor = statusColor(r.conclusion, colors);
+  const stColor = statusColor(effConcl(r), colors);
 
   $('dTitle').textContent = r.name;
 
   $('dHero').innerHTML =
     '<div class="hero">' +
-      '<h1>' + esc(r.name) + '</h1>' +
+      '<h1>' + esc(r.name) + (isManual(r) ? '<span class="manual">手</span>' : '') + '</h1>' +
       '<div class="meta">' +
         '<span class="tag">' + esc(r.code) + '</span>' +
-        '<span class="tag cat">' + esc(r.category) + '</span>' +
-        '<span class="pill" style="background:' + stColor + '">' + esc(r.conclusion) + '</span>' +
+        '<button class="tag cat editable" id="eCat">' + esc(effCat(r)) + '</button>' +
+        '<button class="pill editable" id="eConcl" style="background:' + stColor + '">' + esc(effConcl(r)) + '</button>' +
+      '</div>' +
+      '<div class="meta" style="margin-top:10px">' +
+        '<button class="tag" id="eProf" style="background:var(--brand-soft);color:var(--brand);font-weight:600">查看公司概况 ›</button>' +
       '</div>' +
     '</div>';
+  $('eCat').onclick = () => pickValue('修改类型', catOptions(), effCat(r), (v) => {
+    setOvr(r, 'category', v);
+    openDetail(r); renderCurrent();
+    toast(v ? '类型已改为 ' + v : '已恢复自动判定');
+  });
+  $('eConcl').onclick = () => pickValue('修改判断结果', conclOptions(), effConcl(r), (v) => {
+    setOvr(r, 'conclusion', v);
+    openDetail(r); renderCurrent();
+    toast(v ? '结论已改为 ' + v : '已恢复自动判定');
+  });
+  $('eProf').onclick = () => openProf(r);
+  const nats = document.querySelectorAll('#dBody .jnat');
+  for (let i = 0; i < nats.length; i++) {
+    nats[i].onclick = () => {
+      const idx = Number(nats[i].dataset.ni);
+      const t2 = state.data.judge_tables && state.data.judge_tables[r.category];
+      pickValue('修改性质', natureOptions(t2), effNature(r, idx), (v) => {
+        const k = keyOf(r);
+        const o = state.ovr[k] || (state.ovr[k] = {});
+        if (!o.judge) o.judge = {};
+        if (v) o.judge[idx] = v; else delete o.judge[idx];
+        if (!Object.keys(o.judge).length) delete o.judge;
+        if (!Object.keys(o).length) delete state.ovr[k];
+        saveOvr(); openDetail(r); renderCurrent();
+        toast(v ? '性质已改为 ' + v : '已恢复自动判定');
+      });
+    };
+  }
 
   const c = cmts[keyOf(r)];
+  /* ★ 公告列表移到最下面 */
   $('dBody').innerHTML =
     judgeHtml(r) +
-    annHtml(r) +
     '<div class="card"><div class="card-hd"><span>AI 总结</span></div><div class="card-pad">' + esc(r.summary || '—') + '</div></div>' +
-    '<div class="card"><div class="card-hd"><span>我的点评</span></div><div class="card-pad">' +
-      (c ? esc(c) : '<span style="color:var(--text-3)">还没写点评</span>') + '</div></div>';
+    '<div class="card"><div class="card-hd"><span>我的点评</span><span class="sub">底部 ✎ 可写</span></div><div class="card-pad">' +
+      (c ? esc(c) : '<span style="color:var(--text-3)">还没写点评</span>') + '</div></div>' +
+    annHtml(r);
 
   const more = $('annMore');
   if (more) more.onclick = () => { state.annShown = (d.announcements && d.announcements[r.code] || []).length; openDetail(r); };
 
   $('detail').classList.add('show');
   $('acts').classList.add('show');
+  $('tabbar').classList.add('hide');
   syncActs();
 
   if (first) { pushLayer(); $('detail').scrollTop = 0; }
@@ -870,6 +1015,7 @@ function openDetail(r) {
 function closeDetail() {
   $('detail').classList.remove('show');
   $('acts').classList.remove('show');
+  $('tabbar').classList.remove('hide');
   state.cur = null;
 }
 
@@ -907,26 +1053,21 @@ function menuSheet() {
   );
   $('mCancel').onclick = popLayer;
   $('mImport').onclick = () => { popLayer(); pickFile(); };
-  $('mSource').onclick = sourceSheet;               /* 原地替换，不压层 */
+  $('mSource').onclick = urlsSheet;                  /* 原地替换，不压层 */
   $('mExport').onclick = () => { popLayer(); exportData(); };
   $('mRestore').onclick = () => { popLayer(); restoreBackup(); };
   $('mRefresh').onclick = () => { popLayer(); toast('正在重新加载…'); boot(false, true); };
 }
 
-function sourceSheet() {
+/* ★ 数据源 与 激活码 拆成两个独立入口（2026-09-20） */
+function urlsSheet() {
   const urls = (localStorage.getItem(LS.urls) || '');
-  const key = (localStorage.getItem(LS.key) || '');
   openSheet(
     '<h3>数据源设置</h3>' +
     '<div class="grp">' +
       '<label>数据地址（每行一个，按顺序尝试）</label>' +
       '<textarea id="inUrls" placeholder="https://…/stocks.txt">' + esc(urls) + '</textarea>' +
       '<div class="hint">留空则使用内置地址。可填多个，第一个不通自动试下一个。</div>' +
-    '</div>' +
-    '<div class="grp">' +
-      '<label>解密密钥（64 位 hex，留空用内置）</label>' +
-      '<input type="text" id="inKey" placeholder="留空使用内置密钥" value="' + esc(key) + '">' +
-      '<div class="hint">只有换密钥时才需要填。</div>' +
     '</div>' +
     '<div class="sheet-btns">' +
       '<button id="sCancel">取消</button>' +
@@ -936,14 +1077,37 @@ function sourceSheet() {
   $('sCancel').onclick = popLayer;
   $('sSave').onclick = () => {
     const u = $('inUrls').value.trim();
-    const k = $('inKey').value.trim();
-    if (k && !/^[0-9a-fA-F]{64}$/.test(k)) { toast('密钥需为 64 位十六进制'); return; }
     u ? localStorage.setItem(LS.urls, u) : localStorage.removeItem(LS.urls);
-    k ? localStorage.setItem(LS.key, k) : localStorage.removeItem(LS.key);
     popLayer();
     Cache.clear();
     toast('已保存，正在重新加载');
     boot(false, true);
+  };
+}
+
+function keySheet() {
+  const key = (localStorage.getItem(LS.key) || '');
+  openSheet(
+    '<h3>激活码</h3>' +
+    '<div class="grp">' +
+      '<label>激活码（64 位十六进制）</label>' +
+      '<input type="text" id="inKey" placeholder="留空则使用内置激活码" value="' + esc(key) + '">' +
+      '<div class="hint">换激活码后才需要填；填错会解不开数据。</div>' +
+    '</div>' +
+    '<div class="sheet-btns">' +
+      '<button id="kClear">恢复内置</button>' +
+      '<button id="kSave" class="primary">保存并重新加载</button>' +
+    '</div>'
+  );
+  $('kClear').onclick = () => {
+    localStorage.removeItem(LS.key);
+    popLayer(); Cache.clear(); toast('已恢复内置激活码'); boot(false, true);
+  };
+  $('kSave').onclick = () => {
+    const k = $('inKey').value.trim();
+    if (k && !/^[0-9a-fA-F]{64}$/.test(k)) { toast('激活码需为 64 位十六进制'); return; }
+    k ? localStorage.setItem(LS.key, k) : localStorage.removeItem(LS.key);
+    popLayer(); Cache.clear(); toast('已保存，正在重新加载'); boot(false, true);
   };
 }
 
@@ -1048,35 +1212,364 @@ function restoreBackup() {
   el.click();
 }
 
+
+/* ==================================================================
+   2026-09-20 新增：手动覆盖 / 底部菜单 / 公司概况 / 检查更新
+   ================================================================== */
+function ovrOf(r) { return (state.ovr && state.ovr[keyOf(r)]) || {}; }
+function effConcl(r) { const o = ovrOf(r); return o.conclusion || r.conclusion; }
+function effCat(r) { const o = ovrOf(r); return o.category || r.category; }
+function eff(r) {
+  const o = ovrOf(r);
+  if (!o.conclusion && !o.category) return r;
+  return Object.assign({}, r, {
+    conclusion: o.conclusion || r.conclusion,
+    category: o.category || r.category,
+  });
+}
+function effNature(r, i) {
+  const o = ovrOf(r);
+  if (o.judge && o.judge[i]) return o.judge[i];
+  const t = state.data && state.data.judge_tables && state.data.judge_tables[r.category];
+  return (t && t.rows && t.rows[i] && t.rows[i][1]) || '';
+}
+function isManual(r) {
+  const o = ovrOf(r);
+  return !!(o.conclusion || o.category || (o.judge && Object.keys(o.judge).length));
+}
+function manualCount() { return Object.keys(state.ovr || {}).length; }
+
+function setOvr(r, field, v) {
+  const k = keyOf(r);
+  const o = state.ovr[k] || (state.ovr[k] = {});
+  if (v) o[field] = v; else delete o[field];
+  if (!Object.keys(o).length) delete state.ovr[k];
+  saveOvr();
+}
+
+/* 选择器：切换式（不是手写输入） */
+function pickValue(title, opts, cur, done) {
+  const list = (opts || []).slice();
+  if (!list.length) { toast('没有可切换的选项'); return; }
+  openSheet(
+    '<h3>' + esc(title) + '</h3><div class="grp">' +
+    list.map((v) =>
+      '<button class="sheet-item" data-v="' + esc(v) + '">' +
+      '<span class="ic">' + (v === cur ? '●' : '○') + '</span>' +
+      '<span class="tx">' + esc(v) + '</span>' +
+      (v === cur ? '<span class="chev">当前</span>' : '') + '</button>').join('') +
+    '<button class="sheet-item" data-v=""><span class="ic">↺</span><span class="tx">恢复自动判定</span></button>' +
+    '</div><div class="sheet-btns"><button id="pvCancel">取消</button></div>'
+  );
+  $('pvCancel').onclick = popLayer;
+  const items = $('sheet').querySelectorAll('.sheet-item[data-v]');
+  for (let i = 0; i < items.length; i++) {
+    items[i].onclick = () => { const v = items[i].dataset.v; popLayer(); done(v); };
+  }
+}
+
+/* 候选项：以数据里实际出现过的值为准，新增类型 / 结论自动出现 */
+function conclOptions() {
+  const set = [];
+  const add = (v) => { if (v && set.indexOf(v) < 0) set.push(v); };
+  (state.data && state.data.records || []).forEach((r) => { add(effConcl(r)); });
+  Object.keys(state.ovr || {}).forEach((k) => { add(state.ovr[k] && state.ovr[k].conclusion); });
+  const PREF = ['有利', '不利', '待定', '否决', '中性'];
+  set.sort((a, b) => { const ia = PREF.indexOf(a), ib = PREF.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
+  return set;
+}
+function catOptions() {
+  const set = [];
+  const add = (v) => { if (v && set.indexOf(v) < 0) set.push(v); };
+  (state.data && state.data.records || []).forEach((r) => { add(effCat(r)); });
+  Object.keys((state.data && state.data.judge_tables) || {}).forEach(add);
+  Object.keys(state.ovr || {}).forEach((k) => { add(state.ovr[k] && state.ovr[k].category); });
+  return set;
+}
+function natureOptions(t) {
+  const set = [];
+  const add = (v) => { if (v && set.indexOf(v) < 0) set.push(v); };
+  ((t && t.rows) || []).forEach((row) => add(row[1]));
+  ['有利', '不利', '中性', '待定'].forEach(add);
+  return set;
+}
+
+/* ------------------------------------------------------------------
+   底部菜单：整页切换（类型 / 结论 / 点评 / 收藏 / 设置）
+   ------------------------------------------------------------------ */
+const TAB_NAME = { list: '股票', type: '类型', concl: '结论', cmt: '点评', fav: '收藏', set: '设置' };
+
+function renderCurrent() {
+  if (state.tab === 'type') renderTypePage();
+  else if (state.tab === 'concl') renderConclPage();
+  else if (state.tab === 'cmt') renderCmtPage();
+  else if (state.tab === 'fav') renderFavPage();
+  else if (state.tab === 'set') renderSetPage();
+  else renderList();
+}
+
+function switchTab(tab) {
+  /* 再点一次当前项 = 回股票列表（底栏只有 5 个位置） */
+  if (state.tab === tab && tab !== 'list') tab = 'list';
+  state.tab = tab;
+  state.shown = PAGE;
+  ['type', 'concl', 'cmt', 'fav', 'set'].forEach((t) => {
+    const el = $('view' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (el) el.classList.toggle('show', t === tab);
+  });
+  const vl = $('viewList');
+  if (vl) vl.style.display = tab === 'list' ? '' : 'none';
+  const sb = $('searchBox');
+  if (sb) sb.style.display = tab === 'list' ? '' : 'none';
+  $('navTitle').textContent = TAB_NAME[tab] || '股票';
+  const btns = document.querySelectorAll('#tabbar button');
+  for (let i = 0; i < btns.length; i++) btns[i].classList.toggle('on', btns[i].dataset.tab === tab);
+  renderCurrent();
+}
+
+function renderRowsInto(el, rows, emptyText) {
+  if (!el) return;
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty">' + esc(emptyText) + '</div>';
+    if (io) { io.disconnect(); io = null; }
+    return;
+  }
+  const shown = rows.slice(0, state.shown);
+  const rest = rows.length - state.shown;
+  el.innerHTML =
+    '<div class="group-hd"><span>共 ' + rows.length + ' 条</span><span></span></div>' +
+    '<div class="group">' + shown.map(rowHtml).join('') + '</div>' +
+    (rest > 0 ? '<button class="more" id="loadMore">加载更多（还有 ' + rest + ' 条）</button>' : '');
+  const btn = $('loadMore');
+  if (btn) btn.onclick = () => { state.shown += PAGE; renderCurrent(); };
+  observeSentinel();
+}
+
+function foldHtml(id, label, count, open) {
+  return '<div class="fold">' +
+    '<button class="fold-hd" data-fold="' + esc(id) + '">' +
+      '<span class="fn">' + esc(label) + '</span>' +
+      '<span class="fc">' + count + ' 条</span>' +
+      '<span class="fx">' + (open ? '▾' : '▸') + '</span>' +
+    '</button>' +
+    (open ? '<div class="fold-bd"><div id="fb_' + esc(id) + '"></div></div>' : '') +
+  '</div>';
+}
+
+function bindFolds(el, re, keyName, render) {
+  const hs = el.querySelectorAll('[data-fold]');
+  for (let i = 0; i < hs.length; i++) {
+    hs[i].onclick = () => {
+      const id = hs[i].dataset.fold.replace(re, '');
+      state[keyName] = state[keyName] === id ? '' : id;
+      render();
+    };
+  }
+}
+
+function renderTypePage() {
+  const el = $('viewType');
+  if (!state.data) { el.innerHTML = '<div class="empty">还没有数据</div>'; return; }
+  const cats = catOptions();
+  el.innerHTML = '<div class="set-sec">按类型查看（点箭头展开该类型的股票）</div>' +
+    cats.map((c) => foldHtml('c_' + c, c, byCat(c).length, state.openCat === c)).join('');
+  bindFolds(el, /^c_/, 'openCat', renderTypePage);
+  if (state.openCat) renderRowsInto($('fb_c_' + state.openCat), byCat(state.openCat), '该类型下没有记录');
+}
+
+function renderConclPage() {
+  const el = $('viewConcl');
+  if (!state.data) { el.innerHTML = '<div class="empty">还没有数据</div>'; return; }
+  const cs = conclOptions();
+  el.innerHTML = '<div class="set-sec">按结论查看</div>' +
+    cs.map((c) => foldHtml('s_' + c, c, byConcl(c).length, state.openConcl === c)).join('');
+  bindFolds(el, /^s_/, 'openConcl', renderConclPage);
+  if (state.openConcl) renderRowsInto($('fb_s_' + state.openConcl), byConcl(state.openConcl), '没有该结论的记录');
+}
+
+function renderCmtPage() {
+  const el = $('viewCmt');
+  if (!state.data) { el.innerHTML = '<div class="empty">还没有数据</div>'; return; }
+  const rows = byCmt();
+  el.innerHTML = '<div class="set-sec">我写过点评的（' + rows.length + '）</div><div id="cmtList"></div>';
+  renderRowsInto($('cmtList'), rows, '还没有点评');
+}
+
+function renderFavPage() {
+  const el = $('viewFav');
+  if (!state.data) { el.innerHTML = '<div class="empty">还没有数据</div>'; return; }
+  const rows = byFav();
+  el.innerHTML = '<div class="set-sec">我收藏的（' + rows.length + '）</div><div id="favList"></div>';
+  renderRowsInto($('favList'), rows, '还没有收藏');
+}
+
+function setItem(id, ic, tx, val) {
+  return '<button class="set-item" id="' + id + '"><span class="ic">' + ic + '</span>' +
+    '<span class="tx">' + esc(tx) + '</span>' +
+    (val ? '<span class="vv">' + esc(val) + '</span>' : '') +
+    '<span class="chev">›</span></button>';
+}
+
+function renderSetPage() {
+  const el = $('viewSet');
+  const hasKey = !!((localStorage.getItem(LS.key) || '').trim());
+  const hasUrl = !!((localStorage.getItem(LS.urls) || '').trim());
+  el.innerHTML =
+    '<div class="set-sec">数据</div><div class="fold">' +
+      setItem('sUrl', '≡', '数据源设置', hasUrl ? '已自定义' : '内置') +
+      setItem('sKey', '⚿', '激活码', hasKey ? '已设置' : '内置') +
+      setItem('sImport', '↧', '从本地文件导入 txt', '') +
+      setItem('sRefresh', '↻', '重新加载数据（回到线上）', '') +
+    '</div>' +
+    '<div class="set-sec">备份</div><div class="fold">' +
+      setItem('sExport', '↥', '导出收藏与点评', '') +
+      setItem('sRestore', '↧', '从备份恢复收藏与点评', '') +
+    '</div>' +
+    '<div class="set-sec">手动修改</div><div class="fold">' +
+      setItem('sOvr', '✎', '我改过的记录', manualCount() + ' 条') +
+      setItem('sOvrClear', '↺', '全部恢复自动判定', '') +
+    '</div>' +
+    '<div class="set-sec">应用</div><div class="fold">' +
+      setItem('sUpdate', '⇩', '检查更新', 'v' + APP_VERSION) +
+      setItem('sBack', '‹', '回到股票列表', '') +
+    '</div>';
+  $('sUrl').onclick = urlsSheet;
+  $('sKey').onclick = keySheet;
+  $('sImport').onclick = pickFile;
+  $('sRefresh').onclick = () => { toast('正在重新加载…'); boot(false, true); };
+  $('sExport').onclick = exportData;
+  $('sRestore').onclick = restoreBackup;
+  $('sOvr').onclick = ovrSheet;
+  $('sOvrClear').onclick = () => {
+    const n = manualCount();
+    if (!n) { toast('没有手动修改'); return; }
+    state.ovr = {}; saveOvr(); renderCurrent(); toast('已恢复 ' + n + ' 条为自动判定');
+  };
+  $('sUpdate').onclick = checkUpdate;
+  $('sBack').onclick = () => switchTab('list');
+}
+
+function ovrSheet() {
+  const ks = Object.keys(state.ovr || {});
+  if (!ks.length) { toast('还没有手动改过任何记录'); return; }
+  openSheet('<h3>我改过的记录（' + ks.length + '）</h3><div class="grp">' +
+    ks.map((k) => {
+      const o = state.ovr[k] || {};
+      const bits = [];
+      if (o.category) bits.push('类型→' + o.category);
+      if (o.conclusion) bits.push('结论→' + o.conclusion);
+      if (o.judge && Object.keys(o.judge).length) bits.push('性质×' + Object.keys(o.judge).length);
+      return '<button class="sheet-item" data-k="' + esc(k) + '"><span class="ic">✎</span>' +
+        '<span class="tx">' + esc(k) + '<br><span style="font-size:12px;color:var(--text-2)">' +
+        esc(bits.join(' · ')) + '</span></span><span class="chev">↺</span></button>';
+    }).join('') +
+    '</div><div class="sheet-btns"><button id="ovCancel">关闭</button></div>');
+  $('ovCancel').onclick = popLayer;
+  const items = $('sheet').querySelectorAll('[data-k]');
+  for (let i = 0; i < items.length; i++) {
+    items[i].onclick = () => {
+      delete state.ovr[items[i].dataset.k];
+      saveOvr(); popLayer(); toast('该条已恢复自动判定'); renderCurrent();
+    };
+  }
+}
+
+/* ------------------------------------------------------------------
+   公司概况（同花顺 F10，App 内 iframe）
+   ★ 实测 2026-09-20：手机 UA 返回 200（194KB 静态 HTML）、
+     响应头无 X-Frame-Options / frame-ancestors、正文无 frame-buster
+     → 可以内嵌。页面无 viewport（PC 宽版），按 1024 宽舞台等比缩放。
+   ------------------------------------------------------------------ */
+const STAGE_W = 1024;
+
+function openProf(r) {
+  const code = String((r && r.code) || '').replace(/[^0-9]/g, '');
+  if (!code) { toast('这只股票没有代码'); return; }
+  state.profCode = code;
+  $('profTitle').textContent = ((r && r.name) || '') + ' · 公司概况';
+  $('profStage').innerHTML =
+    '<iframe id="profFrame" src="https://basic.10jqka.com.cn/' + code + '/" referrerpolicy="no-referrer"></iframe>';
+  $('prof').classList.add('show');
+  $('tabbar').classList.add('hide');
+  if (state.tab === 'list') { const vl = $('viewList'); if (vl) vl.style.display = 'none'; }
+  pushLayer();
+  setTimeout(fitProf, 60);
+}
+
+function closeProf() {
+  $('prof').classList.remove('show');
+  $('tabbar').classList.remove('hide');
+  $('profStage').innerHTML = '';   /* 清空 iframe，避免后台继续加载 */
+  if (state.tab === 'list') { const vl = $('viewList'); if (vl) vl.style.display = ''; }
+}
+
+function fitProf() {
+  const view = $('profView'), st = $('profStage'), fr = $('profFrame');
+  if (!view || !st || !fr) return;
+  const w = view.clientWidth || window.innerWidth || 390;
+  const h0 = view.clientHeight || window.innerHeight || 700;
+  const sc = w / STAGE_W;
+  const h = Math.max(600, Math.round(h0 / sc));
+  st.style.width = STAGE_W + 'px';
+  st.style.height = h + 'px';
+  st.style.transform = 'scale(' + sc + ')';
+}
+window.addEventListener('resize', fitProf);
+
+/* ------------------------------------------------------------------
+   检查更新（读 GitHub Releases）
+   ★ 真·静默安装需要 native（下载 + FileProvider + 安装权限）；
+     这里做到「App 内检测 + 一键下载」，安装由系统完成。
+   ------------------------------------------------------------------ */
+async function checkUpdate() {
+  toast('正在检查更新…', 1200);
+  try {
+    const res = await fetch(UPDATE_API, { headers: { Accept: 'application/vnd.github+json' }, cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const j = await res.json();
+    const tag = String(j.tag_name || '').replace(/^v/, '');
+    const apk = (j.assets || []).find((a) => /\.apk$/.test(a.name || ''));
+    if (!apk) { toast('暂时没有可下载的安装包', 2400); return; }
+    if (!tag || tag === APP_VERSION) { toast('已是最新版本 v' + APP_VERSION, 2200); return; }
+    openSheet(
+      '<h3>发现新版本 ' + esc(tag) + '</h3>' +
+      '<div class="grp"><div class="card-pad" style="font-size:14px">' +
+        '当前：v' + esc(APP_VERSION) + '<br>新版：v' + esc(tag) +
+        (j.body ? '<br><br>' + esc(String(j.body).slice(0, 300)) : '') +
+      '</div></div>' +
+      '<div class="sheet-btns"><button id="uCancel">以后</button>' +
+      '<button id="uGo" class="primary">下载更新</button></div>'
+    );
+    $('uCancel').onclick = popLayer;
+    $('uGo').onclick = () => {
+      popLayer();
+      const a = document.createElement('a');
+      a.href = apk.browser_download_url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => a.remove(), 500);
+      toast('已开始下载，下载完点通知安装');
+    };
+  } catch (e) {
+    toast('检查更新失败：' + e.message, 2800);
+  }
+}
+
 /* ==================================================================
    事件绑定
    ================================================================== */
+
 $('q').addEventListener('input', (e) => { state.query = e.target.value; state.shown = PAGE; renderList(); });
 
-$('btnFav').addEventListener('click', () => {
-  state.onlyFav = !state.onlyFav;
-  $('btnFav').classList.toggle('on', state.onlyFav);
-  state.shown = PAGE;
-  renderList();
+/* ★ 底部菜单：整页切换；再点一次当前项 = 回股票列表 */
+$('tabbar').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b || !b.dataset.tab) return;
+  switchTab(b.dataset.tab);
 });
-
-$('btnMore').addEventListener('click', menuSheet);
-
-$('catSegs').addEventListener('click', (e) => {
-  const b = e.target.closest('.seg'); if (!b) return;
-  state.cat = b.dataset.cat;
-  state.shown = PAGE;
-  [...$('catSegs').children].forEach((c) => c.classList.toggle('on', c === b));
-  renderList();
-});
-
-$('stSegs').addEventListener('click', (e) => {
-  const b = e.target.closest('.seg'); if (!b) return;
-  state.concl = b.dataset.st;
-  state.shown = PAGE;
-  [...$('stSegs').children].forEach((c) => c.classList.toggle('on', c === b));
-  renderList();
-});
+$('btnProfBack').addEventListener('click', popLayer);
+$('btnProfFit').addEventListener('click', () => { fitProf(); toast('已按屏宽缩放，横屏看得更清'); });
 
 $('listWrap').addEventListener('click', (e) => {
   const row = e.target.closest('.row'); if (!row) return;
@@ -1175,6 +1668,7 @@ window.addEventListener('sjOpenFile', (e) => {
 })();
 
 boot(false);
+switchTab('list');
 </script>
 </body>
 </html>
